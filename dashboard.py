@@ -235,7 +235,6 @@ with tab2:
                 if threats_found:
                     st.error(f"🚨 ADVERSARIAL ATTACK DETECTED")
                     for threat in threats_found:
-                        # --- BOLD RED ALERT ---
                         st.markdown(f"""
                         <div class="verdict-fail">
                             ⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br>
@@ -276,7 +275,6 @@ with tab2:
                         if res.status_code == 200:
                             seal_id = res.json()['seal_id']
                             
-                            # --- BOLD GREEN SUCCESS MESSAGE ---
                             st.markdown(f"""
                             <div class="verdict-success" style="margin-bottom: 10px;">
                                 🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br>
@@ -312,6 +310,9 @@ with tab3:
             is_safe, status = guard.protect(target_data, target_root)
             
             if is_safe:
+                # --- RESTORED: THE BALLOONS! ---
+                st.balloons()
+                
                 st.markdown(f"""
                 <div class="verdict-success">
                     ✅ VERIFIED: <span style="color: #16a34a; font-weight: 800;">SECURE</span> <br>
