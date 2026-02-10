@@ -39,6 +39,28 @@ st.markdown("""
     }
     ::placeholder { color: #94a3b8 !important; opacity: 1 !important; }
 
+    /* --- FIX: HEADER & MENU VISIBILITY --- */
+    /* Force Header to be White */
+    header[data-testid="stHeader"] {
+        background-color: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0; /* Subtle separator */
+    }
+    
+    /* Force Sidebar Toggle Arrow to be Dark Blue (Visible) */
+    button[kind="header"] {
+        color: #0f172a !important;
+        background-color: transparent !important;
+    }
+    
+    /* Force Top Right Menu (Three Dots / Manage App) to be Dark Blue */
+    div[data-testid="stToolbar"] {
+        color: #0f172a !important;
+    }
+    div[data-testid="stToolbar"] button {
+        color: #0f172a !important;
+    }
+    /* ------------------------------------- */
+
     /* CUSTOM HASH BOX (PURE WHITE) */
     .hash-box {
         background-color: #ffffff !important;
@@ -127,10 +149,8 @@ st.markdown("""
         border-color: #0f172a !important;
     }
 
-    /* Hide Streamlit Elements - BUT KEEP HEADER VISIBLE FOR SIDEBAR ARROW */
-    #MainMenu {visibility: hidden;}
+    /* Hide Footer only - KEEP HEADER VISIBLE */
     footer {visibility: hidden;}
-    /* header {visibility: hidden;}  <-- DELETED THIS LINE TO FIX SIDEBAR BUG */
     </style>
     """, unsafe_allow_html=True)
 
