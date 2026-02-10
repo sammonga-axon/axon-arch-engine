@@ -46,18 +46,18 @@ st.markdown("""
         color: #0e1117 !important;
         background-color: #ffffff !important;
     }
-    /* MAKE PLACEHOLDER TEXT LIGHTER (GREY) */
+    /* MAKE PLACEHOLDER TEXT VERY LIGHT GREY */
     ::placeholder {
-        color: #a0aec0 !important; /* Light Grey */
+        color: #e2e8f0 !important; /* Very Light Grey */
         opacity: 1 !important;
     }
     ::-webkit-input-placeholder {
-        color: #a0aec0 !important;
+        color: #e2e8f0 !important;
     }
 
-    /* --- FIX 2: LATENCY BOX (Custom CSS instead of st.code) --- */
+    /* --- FIX 2: LATENCY BOX --- */
     .latency-box {
-        background-color: #e6e8eb; /* Matches Sidebar */
+        background-color: #e6e8eb;
         color: #0e1117;
         padding: 8px 12px;
         border-radius: 5px;
@@ -77,6 +77,32 @@ st.markdown("""
         border-color: #0e1117 !important;
         background-color: #f3f4f6 !important;
     }
+
+    /* --- FIX 4: ALERTS (Red Error / Green Success) --- */
+    div[data-testid="stNotification"] {
+        border-radius: 6px;
+    }
+    
+    /* ERROR BOX (Red Alert) */
+    div[data-testid="stNotification"][aria-label="Error"] {
+        background-color: #fee2e2 !important; /* Light Red BG */
+        border: 1px solid #ef4444 !important; /* Red Border */
+    }
+    div[data-testid="stNotification"][aria-label="Error"] div,
+    div[data-testid="stNotification"][aria-label="Error"] p,
+    div[data-testid="stNotification"][aria-label="Error"] span {
+        color: #b91c1c !important; /* DARK RED TEXT */
+    }
+
+    /* SUCCESS BOX (Green Hash) */
+    div[data-testid="stNotification"][aria-label="Success"] {
+        background-color: #dcfce7 !important;
+        border: 1px solid #22c55e !important;
+    }
+    div[data-testid="stNotification"][aria-label="Success"] div,
+    div[data-testid="stNotification"][aria-label="Success"] p {
+        color: #15803d !important; /* Dark Green Text */
+    }
     
     /* 5. Custom Badge Style */
     .verified-badge {
@@ -88,7 +114,7 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* 6. Custom Metric Layouts (Resized "12") */
+    /* 6. Custom Metric Layouts (Fixed Normal Weight) */
     .metric-container {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
@@ -98,8 +124,8 @@ st.markdown("""
         margin-bottom: 4px;
     }
     .metric-value {
-        font-size: 36px; /* Reduced from 46px to match standard 85k size */
-        font-weight: 700;
+        font-size: 36px; 
+        font-weight: 500; /* Normal Weight (Not Bold) */
         color: #0e1117 !important;
         line-height: 1.2;
     }
@@ -147,7 +173,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # LATENCY DISPLAY (Replaced st.code with Custom Box to remove Black BG)
+    # LATENCY DISPLAY
     st.caption("Engine Latency (Live):")
     st.markdown(f"""
         <div class="latency-box">
@@ -166,7 +192,7 @@ with tab1:
     col1.metric("Total Records Sealed", "1,240")
     col2.metric("Active Verifications", "85k")
     
-    # Custom "Attacks Blocked" Layout (Resized)
+    # Custom "Attacks Blocked" Layout
     with col3:
         st.markdown("""
         <div class="metric-container">
@@ -191,7 +217,7 @@ with tab1:
 with tab2:
     st.subheader("Seal New Data into the Room of Truth")
     
-    # INPUT FIELD (CSS Forces Placeholder to Light Grey)
+    # INPUT FIELD (Placeholders are now very light)
     data_to_seal = st.text_area("Enter Critical Data (One item per line):", 
                                placeholder="Transaction_ID: TXN_9982\nAmount: $10,000.00\nOrigin: Chase_Bank_NY", height=150)
     
@@ -218,6 +244,7 @@ with tab2:
                     net_latency = (net_end - net_start) * 1000
                     
                     if res.status_code == 200:
+                        # SUCCESS: Shows the Hash!
                         st.success(f"Successfully Sealed! Seal ID: {res.json()['seal_id']}")
                         
                         st.session_state.last_latency = f"{core_latency:.4f} ms"
@@ -225,7 +252,8 @@ with tab2:
                         m1, m2 = st.columns(2)
                         m1.metric("Core Engine Speed", f"{core_latency:.4f} ms", delta="🚀 O(log n) Target Met")
                         m2.metric("Cloud Sync (RTT)", f"{net_latency:.0f} ms", delta="Network Latency", delta_color="off")
-                        st.rerun() 
+                        
+                        # NO RERUN - Keeps the hash visible!
                         
                     else:
                         st.error("Failed to seal data.")
@@ -247,4 +275,5 @@ with tab3:
                 st.balloons()
                 st.success(f"VERDICT: {status} | Data is untainted.")
             else:
+                # Custom Red Alert Message
                 st.error(f"VERDICT: {status} | ALERT: Intent Invalidation Triggered.")
