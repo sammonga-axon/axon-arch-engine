@@ -15,7 +15,7 @@ API_KEY = "SOVEREIGN_KEY_001"
 guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 
-# --- CSS: FINAL VISUAL POLISH ---
+# --- CSS: FINAL VISUAL POLISH (NO MORE BLACK BOXES) ---
 st.markdown("""
     <style>
     /* 1. Global Professional White */
@@ -39,16 +39,19 @@ st.markdown("""
     }
     ::placeholder { color: #94a3b8 !important; opacity: 1 !important; }
 
-    /* FIX: HASH CODE BOX (PURE WHITE) */
-    code {
-        color: #0f172a !important;
-        background-color: #ffffff !important; /* NOW PURE WHITE */
-        font-family: 'JetBrains Mono', monospace !important;
-        padding: 12px !important;
-        border-radius: 6px !important;
-        border: 1px solid #cbd5e1 !important; /* Match Input Borders */
-        font-weight: 600 !important;
-        display: block;
+    /* FIX: CUSTOM HASH BOX (Replaces st.code) */
+    .hash-box {
+        background-color: #ffffff !important; /* PURE WHITE */
+        color: #0f172a !important;            /* DARK TEXT */
+        border: 1px solid #cbd5e1;            /* MATCHES INPUT BORDER */
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 500;
+        word-wrap: break-word; /* Prevents overflow */
+        margin-top: 5px;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
     /* FIX: TABLE VISIBILITY */
@@ -265,8 +268,15 @@ with tab2:
                             seal_id = res.json()['seal_id']
                             
                             st.success(f"Immutable Proof Generated. Latency: {new_latency_text}")
-                            st.markdown("### 🔑 Cryptographic Proof:")
-                            st.code(seal_id, language="text") 
+                            
+                            st.markdown("### 🔑 Cryptographic Proof (Copy This):")
+                            
+                            # --- CRITICAL FIX: REPLACED st.code WITH CUSTOM WHITE BOX ---
+                            st.markdown(f"""
+                                <div class="hash-box">
+                                    {seal_id}
+                                </div>
+                            """, unsafe_allow_html=True)
                             
                         else:
                             st.error("Cloud Sync Failed.")
