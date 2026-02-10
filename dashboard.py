@@ -15,7 +15,7 @@ API_KEY = "SOVEREIGN_KEY_001"
 guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 
-# --- CSS: FINAL VISUAL POLISH (NO MORE BLACK BOXES) ---
+# --- CSS: FINAL VISUAL POLISH ---
 st.markdown("""
     <style>
     /* 1. Global Professional White */
@@ -39,22 +39,22 @@ st.markdown("""
     }
     ::placeholder { color: #94a3b8 !important; opacity: 1 !important; }
 
-    /* FIX: CUSTOM HASH BOX (Replaces st.code) */
+    /* CUSTOM HASH BOX (PURE WHITE) */
     .hash-box {
-        background-color: #ffffff !important; /* PURE WHITE */
-        color: #0f172a !important;            /* DARK TEXT */
-        border: 1px solid #cbd5e1;            /* MATCHES INPUT BORDER */
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1;
         padding: 15px;
         border-radius: 6px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 14px;
         font-weight: 500;
-        word-wrap: break-word; /* Prevents overflow */
+        word-wrap: break-word;
         margin-top: 5px;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
-    /* FIX: TABLE VISIBILITY */
+    /* TABLE VISIBILITY */
     div[data-testid="stTable"] {
         color: #0f172a !important;
         background-color: #ffffff !important;
@@ -73,9 +73,9 @@ st.markdown("""
 
     /* VERDICT COLORS */
     .verdict-success {
-        color: #16a34a !important;
-        font-weight: 800 !important;
-        font-size: 18px !important;
+        color: #0f172a !important; /* Base Text Dark */
+        font-weight: 600 !important;
+        font-size: 16px !important;
         background-color: #f0fdf4;
         padding: 15px;
         border-radius: 6px;
@@ -83,9 +83,9 @@ st.markdown("""
         margin-top: 10px;
     }
     .verdict-fail {
-        color: #dc2626 !important;
-        font-weight: 800 !important;
-        font-size: 18px !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
         background-color: #fef2f2;
         padding: 15px;
         border-radius: 6px;
@@ -93,7 +93,7 @@ st.markdown("""
         margin-top: 10px;
     }
 
-    /* LATENCY BOX (SIDEBAR) */
+    /* LATENCY BOX */
     .latency-box {
         background-color: #e2e8f0;
         color: #0f172a;
@@ -104,7 +104,7 @@ st.markdown("""
         border: 1px solid #cbd5e1;
     }
 
-    /* 100% VERIFIED BADGE */
+    /* VERIFIED BADGE */
     .verified-badge {
         background-color: #dcfce7;
         color: #166534 !important;
@@ -231,11 +231,20 @@ with tab2:
                     else:
                         clean_items.append(item)
                 
-                # 2. DISPLAY THREATS
+                # 2. DISPLAY THREATS (RED & BOLD)
                 if threats_found:
                     st.error(f"🚨 ADVERSARIAL ATTACK DETECTED")
                     for threat in threats_found:
-                        st.markdown(f"**BLOCKED:** {threat['type']}")
+                        # --- BOLD RED ALERT ---
+                        st.markdown(f"""
+                        <div class="verdict-fail">
+                            ⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br>
+                            <span style='font-size:14px; font-weight:normal; color:#b91c1c;'>
+                                Threat Pattern: <span style="color: #dc2626; font-weight: 800;">{threat['type']}</span><br>
+                                Action: <span style="color: #dc2626; font-weight: 800;">BLOCKED</span>
+                            </span>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
                 # 3. SEAL CLEAN ITEMS
                 if clean_items:
@@ -267,11 +276,19 @@ with tab2:
                         if res.status_code == 200:
                             seal_id = res.json()['seal_id']
                             
-                            st.success(f"Immutable Proof Generated. Latency: {new_latency_text}")
+                            # --- BOLD GREEN SUCCESS MESSAGE ---
+                            st.markdown(f"""
+                            <div class="verdict-success" style="margin-bottom: 10px;">
+                                🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br>
+                                <span style='font-size:14px; font-weight:normal; color:#15803d;'>
+                                    Deep Packet Inspection Complete: <span style="color: #16a34a; font-weight: 800;">Zero Threats Detected.</span><br>
+                                    Payload Sealed to Immutable Ledger.<br>
+                                    Core Latency: <span style="color: #16a34a; font-weight: 800;">{new_latency_text}</span>
+                                </span>
+                            </div>
+                            """, unsafe_allow_html=True)
                             
                             st.markdown("### 🔑 Cryptographic Proof (Copy This):")
-                            
-                            # --- CRITICAL FIX: REPLACED st.code WITH CUSTOM WHITE BOX ---
                             st.markdown(f"""
                                 <div class="hash-box">
                                     {seal_id}
@@ -297,14 +314,14 @@ with tab3:
             if is_safe:
                 st.markdown(f"""
                 <div class="verdict-success">
-                    ✅ VERIFIED: SECURE <br>
+                    ✅ VERIFIED: <span style="color: #16a34a; font-weight: 800;">SECURE</span> <br>
                     <span style='font-size:14px; font-weight:normal; color:#15803d;'>Mathematical Proof Confirmed. Data is Untainted.</span>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="verdict-fail">
-                    🚨 ALERT: {status} <br>
+                    🚨 ALERT: <span style="color: #dc2626; font-weight: 800;">{status}</span> <br>
                     <span style='font-size:14px; font-weight:normal; color:#b91c1c;'>Intent Invalidation Triggered. Do not load into Model.</span>
                 </div>
                 """, unsafe_allow_html=True)
