@@ -28,44 +28,49 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* 3. Inputs - Clean & Technical */
+    /* 3. Inputs */
     textarea, input {
         color: #0f172a !important;
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 14px !important;
-        caret-color: #0f172a !important; /* Visible Cursor */
+        caret-color: #0f172a !important;
     }
     ::placeholder { color: #94a3b8 !important; opacity: 1 !important; }
 
-    /* HASH CODE BOX */
+    /* FIX: HASH CODE BOX (PURE WHITE) */
     code {
         color: #0f172a !important;
-        background-color: #f1f5f9 !important;
+        background-color: #ffffff !important; /* NOW PURE WHITE */
         font-family: 'JetBrains Mono', monospace !important;
         padding: 12px !important;
         border-radius: 6px !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid #cbd5e1 !important; /* Match Input Borders */
         font-weight: 600 !important;
         display: block;
     }
 
-    /* DATAFRAME / TABLE */
-    div[data-testid="stDataFrame"] { background-color: #ffffff !important; }
-    div[data-testid="stDataFrame"] div { color: #0f172a !important; background-color: #ffffff !important; }
-
-    /* SIDEBAR TEXT SIZE */
-    .sidebar-text {
-        font-size: 14px !important; 
-        color: #475569 !important;
-        font-family: 'Inter', sans-serif !important;
-        line-height: 1.6;
+    /* FIX: TABLE VISIBILITY */
+    div[data-testid="stTable"] {
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+        width: 100%;
+    }
+    thead tr th {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    tbody tr td {
+        color: #334155 !important;
+        background-color: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
     }
 
     /* VERDICT COLORS */
     .verdict-success {
-        color: #16a34a !important; /* Bold Green */
+        color: #16a34a !important;
         font-weight: 800 !important;
         font-size: 18px !important;
         background-color: #f0fdf4;
@@ -75,7 +80,7 @@ st.markdown("""
         margin-top: 10px;
     }
     .verdict-fail {
-        color: #dc2626 !important; /* Bold Red */
+        color: #dc2626 !important;
         font-weight: 800 !important;
         font-size: 18px !important;
         background-color: #fef2f2;
@@ -85,7 +90,7 @@ st.markdown("""
         margin-top: 10px;
     }
 
-    /* LATENCY BOX (LEFT SIDEBAR) */
+    /* LATENCY BOX (SIDEBAR) */
     .latency-box {
         background-color: #e2e8f0;
         color: #0f172a;
@@ -124,18 +129,22 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER (RIGHT LATENCY) ---
+# --- HEADER ---
 c1, c2 = st.columns([5, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
     st.caption("Immutable Ledger for Vector Embeddings & Model Weights")
+
+# --- INSTANT METRIC UPDATER ---
 with c2:
-    if 'last_latency' not in st.session_state: st.session_state.last_latency = "0.00 ms"
-    st.metric("Inference Latency", st.session_state.last_latency, delta="Target < 5ms")
+    latency_metric_placeholder = st.empty()
+    if 'last_latency' not in st.session_state: 
+        st.session_state.last_latency = "0.00 ms"
+    latency_metric_placeholder.metric("Inference Latency", st.session_state.last_latency, delta="Target < 5ms")
 
 st.markdown("---")
 
-# --- SIDEBAR (WITH 100% VERIFIED) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
@@ -143,7 +152,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # --- RESTORED: THE 100% VERIFIED BLOCK ---
     st.markdown("""
         <div style="font-size: 14px; color: #64748b !important; margin-bottom: 5px;">Integrity Level</div>
         <div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div>
@@ -156,7 +164,7 @@ with st.sidebar:
     
     st.markdown("**Active Threat Rules**")
     st.markdown("""
-        <div class="sidebar-text">
+        <div style="font-size: 14px; color: #475569; line-height: 1.6;">
         [✓] Prompt Injection<br>
         [✓] RAG Poisoning<br>
         [✓] Model Exfiltration<br>
@@ -165,9 +173,10 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    # LEFT LATENCY
+    
     st.caption("Engine Latency (Live):")
-    st.markdown(f"""
+    sidebar_latency_placeholder = st.empty()
+    sidebar_latency_placeholder.markdown(f"""
         <div class="latency-box">
             {st.session_state.last_latency}
         </div>
@@ -185,13 +194,14 @@ with tab1:
         st.metric("Model Integrity", "100%", delta="SHA-256 Verified")
     
     st.markdown("### 📡 Live Vector Stream Analysis")
+    
     siem_data = pd.DataFrame({
         'Timestamp': ['14:02:01', '14:02:05', '14:03:12'],
         'Origin': ['LLM_Inference_Node', 'RAG_Pipeline_04', 'External_API'],
         'Payload_Hash': ['a1b2...99x', 'System Override...', 'Standard_Query'],
         'Defense_Action': ['VERIFIED', 'BLOCKED (Injection)', 'VERIFIED']
     })
-    st.dataframe(siem_data, use_container_width=True)
+    st.table(siem_data)
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
@@ -224,7 +234,7 @@ with tab2:
                     for threat in threats_found:
                         st.markdown(f"**BLOCKED:** {threat['type']}")
                 
-                # 3. SEAL CLEAN ITEMS & SHOW HASH
+                # 3. SEAL CLEAN ITEMS
                 if clean_items:
                     # Calculate Latency
                     core_start = time.perf_counter()
@@ -232,7 +242,18 @@ with tab2:
                         _ = MerkleEngine.hash_data(item)
                     core_end = time.perf_counter()
                     core_latency = (core_end - core_start) * 1000
-                    st.session_state.last_latency = f"{core_latency:.4f} ms"
+                    
+                    # UPDATE STATE
+                    new_latency_text = f"{core_latency:.4f} ms"
+                    st.session_state.last_latency = new_latency_text
+                    
+                    # FORCE UPDATE METRICS
+                    latency_metric_placeholder.metric("Inference Latency", new_latency_text, delta="Target < 5ms")
+                    sidebar_latency_placeholder.markdown(f"""
+                        <div class="latency-box">
+                            {new_latency_text}
+                        </div>
+                    """, unsafe_allow_html=True)
                     
                     # Cloud Sync
                     try:
@@ -243,7 +264,7 @@ with tab2:
                         if res.status_code == 200:
                             seal_id = res.json()['seal_id']
                             
-                            st.success(f"Immutable Proof Generated. Latency: {core_latency:.4f} ms")
+                            st.success(f"Immutable Proof Generated. Latency: {new_latency_text}")
                             st.markdown("### 🔑 Cryptographic Proof:")
                             st.code(seal_id, language="text") 
                             
