@@ -16,10 +16,10 @@ API_KEY = "SOVEREIGN_KEY_001"
 # Initialize SDK
 guard = AxonGuard(API_URL, API_KEY)
 
-# --- CSS: PURE CLEAN THEME ---
+# --- CSS: PURE CLEAN THEME (FINAL FIXES) ---
 st.markdown("""
     <style>
-    /* 1. Force Light Mode Colors */
+    /* 1. Force Light Mode Global Colors */
     .stApp {
         background-color: #ffffff !important;
     }
@@ -29,8 +29,8 @@ st.markdown("""
         background-color: #f0f2f6 !important;
     }
     
-    /* 3. Text Colors */
-    h1, h2, h3, h4, h5, h6, p, span, div {
+    /* 3. Text Colors (Global) */
+    h1, h2, h3, h4, h5, h6, p, span, div, label {
         color: #0e1117 !important;
     }
     
@@ -38,6 +38,38 @@ st.markdown("""
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* --- FIX 1: INPUT FIELDS (Force White Background & Black Text) --- */
+    div[data-baseweb="textarea"], div[data-baseweb="input"] {
+        background-color: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 4px !important;
+    }
+    textarea, input {
+        color: #0e1117 !important;
+        background-color: #ffffff !important;
+        -webkit-text-fill-color: #0e1117 !important;
+    }
+
+    /* --- FIX 2: LATENCY CODE BOX (Light Grey to match Sidebar) --- */
+    code {
+        color: #0e1117 !important;
+        background-color: #e6e8eb !important; /* Matches Sidebar Grey */
+        border-radius: 4px;
+        padding: 4px 8px;
+    }
+
+    /* --- FIX 3: BUTTONS (Visible & Professional) --- */
+    div[data-testid="stButton"] > button {
+        background-color: #ffffff !important;
+        color: #0e1117 !important;
+        border: 1px solid #d1d5db !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        border-color: #0e1117 !important;
+        background-color: #f3f4f6 !important;
+    }
     
     /* 5. Custom Badge Style */
     .verified-badge {
@@ -49,16 +81,17 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* 6. Custom Metric Layouts */
+    /* 6. Custom Metric Layouts (Fixed Size for "12") */
     .metric-container {
-        font-family: 'Source Sans Pro', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     .metric-label {
         font-size: 14px;
         color: #586069 !important;
+        margin-bottom: 4px;
     }
     .metric-value {
-        font-size: 42px;
+        font-size: 46px; /* Increased to match Streamlit default */
         font-weight: 700;
         color: #0e1117 !important;
         line-height: 1.2;
@@ -76,8 +109,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER (WITH LATENCY ON RIGHT) ---
-c1, c2 = st.columns([3, 1])
+# --- HEADER (FIXED ALIGNMENT) ---
+# We use [5, 1] to give the Title much more space so it doesn't wrap
+c1, c2 = st.columns([5, 1]) 
+
 with c1:
     st.title("🛡️ AXON ARCH | Sovereign Command Center")
 with c2:
@@ -88,7 +123,7 @@ with c2:
 
 st.markdown("---")
 
-# --- SIDEBAR (WITH LATENCY ON LEFT) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("System Status")
     
@@ -108,7 +143,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Sidebar Latency Display (Your Request)
+    # Sidebar Latency Display
     st.caption("Engine Latency (Live):")
     st.code(st.session_state.last_latency)
 
@@ -123,7 +158,7 @@ with tab1:
     col1.metric("Total Records Sealed", "1,240")
     col2.metric("Active Verifications", "85k")
     
-    # Custom "Attacks Blocked" Layout
+    # Custom "Attacks Blocked" Layout (Fixed Sizing)
     with col3:
         st.markdown("""
         <div class="metric-container">
@@ -147,6 +182,8 @@ with tab1:
 
 with tab2:
     st.subheader("Seal New Data into the Room of Truth")
+    
+    # INPUT FIELD (Forced White via CSS)
     data_to_seal = st.text_area("Enter Critical Data (One item per line):", 
                                placeholder="Transaction_ID: TXN_9982\nAmount: $10,000.00\nOrigin: Chase_Bank_NY", height=150)
     
@@ -156,7 +193,7 @@ with tab2:
             
             with st.spinner("Cryptographic Sealing in progress..."):
                 
-                # --- SAMUEL'S METRIC ---
+                # --- METRIC LOGIC ---
                 core_start = time.perf_counter()
                 for item in items:
                     _ = MerkleEngine.hash_data(item)
@@ -175,13 +212,12 @@ with tab2:
                     if res.status_code == 200:
                         st.success(f"Successfully Sealed! Seal ID: {res.json()['seal_id']}")
                         
-                        # Store for Sidebar AND Header
                         st.session_state.last_latency = f"{core_latency:.4f} ms"
                         
                         m1, m2 = st.columns(2)
                         m1.metric("Core Engine Speed", f"{core_latency:.4f} ms", delta="🚀 O(log n) Target Met")
                         m2.metric("Cloud Sync (RTT)", f"{net_latency:.0f} ms", delta="Network Latency", delta_color="off")
-                        st.rerun() # Refresh page to update the header metric instantly!
+                        st.rerun() 
                         
                     else:
                         st.error("Failed to seal data.")
@@ -190,6 +226,8 @@ with tab2:
 
 with tab3:
     st.subheader("Cryptographic Integrity Audit")
+    
+    # INPUT FIELDS (Forced White via CSS)
     target_root = st.text_input("Enter Seal ID (Master Root):")
     target_data = st.text_input("Enter Data to Verify:")
     
