@@ -136,7 +136,7 @@ st.markdown("""
 c1, c2 = st.columns([5, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
-    st.caption("Immutable Ledger for Vector Embeddings & Model Weights")
+    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v2.0.0 (Sentinel)")
 
 # --- INSTANT METRIC UPDATER ---
 with c2:
@@ -147,11 +147,23 @@ with c2:
 
 st.markdown("---")
 
-# --- SIDEBAR ---
+# --- SIDEBAR (UPDATED WITH MERKLE ENGINE) ---
 with st.sidebar:
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
-    st.info("Vector DB: Pinecone/Weaviate")
+    
+    # --- PROFESSIONAL TECH STACK DISPLAY ---
+    st.markdown("""
+        <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Storage Layer</strong></div>
+        <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a; margin-bottom: 12px;">
+            Vector DB: Pinecone/Weaviate
+        </div>
+
+        <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Integrity Core</strong></div>
+        <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a;">
+            Engine: Merkle-Tree (SHA-256)
+        </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -310,9 +322,7 @@ with tab3:
             is_safe, status = guard.protect(target_data, target_root)
             
             if is_safe:
-                # --- RESTORED: THE BALLOONS! ---
                 st.balloons()
-                
                 st.markdown(f"""
                 <div class="verdict-success">
                     ✅ VERIFIED: <span style="color: #16a34a; font-weight: 800;">SECURE</span> <br>
