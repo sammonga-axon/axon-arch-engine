@@ -7,7 +7,7 @@ from merkle_engine import MerkleEngine
 from siem_engine import SovereignSentinel 
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="AXON ARCH | AI Memory Defense", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="AXON ARCH | AI Memory Defense", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
 API_URL = "https://axon-arch-engine.onrender.com" 
 API_KEY = "SOVEREIGN_KEY_001"
@@ -127,8 +127,10 @@ st.markdown("""
         border-color: #0f172a !important;
     }
 
-    /* Hide Streamlit Elements */
-    footer {visibility: hidden;} header {visibility: hidden;}
+    /* Hide Streamlit Elements - BUT KEEP HEADER VISIBLE FOR SIDEBAR ARROW */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    /* header {visibility: hidden;}  <-- DELETED THIS LINE TO FIX SIDEBAR BUG */
     </style>
     """, unsafe_allow_html=True)
 
