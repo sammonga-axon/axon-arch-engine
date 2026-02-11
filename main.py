@@ -1,11 +1,17 @@
+import os
 from fastapi import FastAPI, HTTPException, Depends, Header
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from merkle_engine import MerkleEngine
 from database import AxonDB
 
-app = FastAPI(title="AXON ARCH | Provenance Gateway V1.1")
+# --- CONFIGURATION ---
+# In Production (Render), set this variable in your Dashboard!
+SOVEREIGN_KEY = os.getenv("AXON_SOVEREIGN_KEY", "dev_secret_2026_default").encode()
 
+app = FastAPI(title="AXON ARCH | Sovereign Gateway V2.0 (HMAC)")
+
+# --- MODELS ---
 class SealRequest(BaseModel):
     data_items: List[str]
 
@@ -16,8 +22,9 @@ class ProofRequest(BaseModel):
 class VerifyRequest(BaseModel):
     data: str
     target_root: str
-    proof: List[dict] # In V1.1, the proof is mandatory for verification
+    proof: List[dict]
 
+# --- AUTH ---
 def get_current_client(x_api_key: str = Header(...)):
     db = AxonDB()
     client = db.validate_key(x_api_key)
@@ -26,27 +33,27 @@ def get_current_client(x_api_key: str = Header(...)):
         raise HTTPException(status_code=403, detail="Access Denied")
     return client
 
-# --- Endpoint 1: Seal a Batch ---
+# --- ENDPOINTS ---
+
 @app.post("/v1/seal")
 async def create_seal(payload: SealRequest, client: dict = Depends(get_current_client)):
-    engine = MerkleEngine(payload.data_items)
+    # 1. Initialize Engine with the Sovereign Key
+    engine = MerkleEngine(payload.data_items, secret_key=SOVEREIGN_KEY)
+    
     db = AxonDB()
-    # We now save the data so we can generate proofs later
+    # 2. Log the Seal (Standard Schema)
     log_id = db.log_seal(client['api_key'], engine.root, payload.data_items)
     db.close()
+    
     return {
         "status": "COMMITTED",
         "seal_id": engine.root,
-        "count": len(payload.data_items)
+        "count": len(payload.data_items),
+        "timestamp": "Synced"
     }
 
-# --- Endpoint 2: Generate a Proof (The New SaaS Feature) ---
 @app.post("/v1/get_proof")
 async def generate_proof(payload: ProofRequest, client: dict = Depends(get_current_client)):
-    """
-    Client sends a Root and the Data they want to verify.
-    Server looks up the batch, rebuilds the tree, and sends back the Proof path.
-    """
     db = AxonDB()
     batch = db.get_batch_by_root(payload.target_root)
     db.close()
@@ -57,14 +64,17 @@ async def generate_proof(payload: ProofRequest, client: dict = Depends(get_curre
     if payload.target_data not in batch:
         raise HTTPException(status_code=400, detail="Data not found in this Seal.")
 
-    # Rebuild the engine to calculate the path
-    engine = MerkleEngine(batch)
+    # Rebuild the engine with the SAME key to reproduce the tree
+    engine = MerkleEngine(batch, secret_key=SOVEREIGN_KEY)
     
-    # Find the index of the requested data
-    target_hash = MerkleEngine.hash_data(payload.target_data)
-    index = engine.leaves.index(target_hash)
+    # Find index and generate proof
+    target_hash = engine.hash_data(payload.target_data)
     
-    # Get the mathematical proof
+    try:
+        index = engine.leaves.index(target_hash)
+    except ValueError:
+        raise HTTPException(status_code=500, detail="CRITICAL: Hash mismatch. Integrity compromised.")
+    
     proof = engine.get_proof(index)
     
     return {
@@ -72,13 +82,18 @@ async def generate_proof(payload: ProofRequest, client: dict = Depends(get_curre
         "proof": proof
     }
 
-# --- Endpoint 3: Verify the Proof ---
 @app.post("/v1/verify")
 async def verify_integrity(payload: VerifyRequest, client: dict = Depends(get_current_client)):
-    # The stateless verification logic
-    is_valid = MerkleEngine.verify_proof(payload.data, payload.proof, payload.target_root)
+    # Stateless Verification
+    is_valid = MerkleEngine.verify_proof(
+        payload.data, 
+        payload.proof, 
+        payload.target_root, 
+        secret_key=SOVEREIGN_KEY
+    )
 
     if is_valid:
         return {"verified": True, "integrity": "SECURE", "intent": "TRUTH"}
     else:
+        # Intent Invalidation Signal
         return {"verified": False, "integrity": "COMPROMISED", "intent": "POISONING"}
