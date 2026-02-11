@@ -3,18 +3,18 @@ import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Load the Connection String from the Environment (Render/Local .env)
+# Load the Connection String from the Environment
 DB_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
     """
-    Establishes a secure SSL connection to the Sovereign Vault (Supabase).
+    Establishes a secure connection to the Sovereign Vault (Supabase).
     """
     if not DB_URL:
         raise ValueError("FATAL: DATABASE_URL is not set. The Vault is locked.")
     try:
-        # standardizing sslmode to 'require' is best practice for cloud dbs
-        conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor, sslmode='require')
+        # FIX 1: Removed 'sslmode' kwarg because it is already in the DB_URL string.
+        conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor)
         return conn
     except psycopg2.Error as e:
         print(f"--- DATABASE CONNECTION ERROR: {e} ---")
@@ -23,7 +23,6 @@ def get_connection():
 def init_db():
     """
     Self-Healing Schema: Automatically creates tables on startup.
-    This replaces the need for manual SQL migrations for the MVP.
     """
     if not DB_URL:
         print("--- WARNING: No DATABASE_URL found. Skipping DB Init. ---")
@@ -33,7 +32,7 @@ def init_db():
         conn = get_connection()
         cursor = conn.cursor()
         
-        # 1. Clients Table (Postgres Syntax)
+        # 1. Clients Table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS clients (
                 api_key TEXT PRIMARY KEY,
@@ -43,7 +42,7 @@ def init_db():
             )
         ''')
         
-        # 2. Provenance Log (Postgres Syntax - using SERIAL for auto-increment)
+        # 2. Provenance Log
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS provenance_log (
                 id SERIAL PRIMARY KEY,
@@ -55,7 +54,7 @@ def init_db():
             )
         ''')
         
-        # 3. Seed the Admin Key (Idempotent: Only inserts if it doesn't exist)
+        # 3. Seed the Admin Key
         cursor.execute('''
             INSERT INTO clients (api_key, organization_name, tier) 
             VALUES (%s, %s, %s)
@@ -75,7 +74,6 @@ class AxonDB:
 
     def validate_key(self, api_key: str):
         cursor = self.conn.cursor()
-        # Note: Postgres uses %s for placeholders, not ?
         cursor.execute("SELECT * FROM clients WHERE api_key = %s AND active = TRUE", (api_key,))
         return cursor.fetchone()
 
@@ -84,12 +82,17 @@ class AxonDB:
         cursor = self.conn.cursor()
         data_json = json.dumps(data_payload)
         
-        # RETURNING id is specific to Postgres to get the inserted row ID
         cursor.execute(
             "INSERT INTO provenance_log (client_key, merkle_root, stored_data) VALUES (%s, %s, %s) RETURNING id", 
             (api_key, root_hash, data_json)
         )
-        row_id = cursor.fetchone()['id']
+        
+        # FIX 2: Handle potential None return (Safety Check)
+        result = cursor.fetchone()
+        if result is None:
+            raise ValueError("Database Insert Failed: No ID returned.")
+            
+        row_id = result['id']
         self.conn.commit()
         return row_id
 
@@ -104,5 +107,4 @@ class AxonDB:
         self.conn.close()
 
 if __name__ == "__main__":
-    # If run locally, this will try to connect to the DB_URL in your .env
     init_db()
