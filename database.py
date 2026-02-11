@@ -1,65 +1,102 @@
-import sqlite3
+import os
 import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-DB_NAME = "axon_arch_memory.db"
+# Load the Connection String from the Environment (Render/Local .env)
+DB_URL = os.getenv("DATABASE_URL")
+
+def get_connection():
+    """
+    Establishes a secure SSL connection to the Sovereign Vault (Supabase).
+    """
+    if not DB_URL:
+        raise ValueError("FATAL: DATABASE_URL is not set. The Vault is locked.")
+    try:
+        # standardizing sslmode to 'require' is best practice for cloud dbs
+        conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor, sslmode='require')
+        return conn
+    except psycopg2.Error as e:
+        print(f"--- DATABASE CONNECTION ERROR: {e} ---")
+        raise e
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    # 1. Clients Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS clients (
-            api_key TEXT PRIMARY KEY,
-            organization_name TEXT,
-            tier TEXT DEFAULT 'Gatekeeper',
-            active INTEGER DEFAULT 1
-        )
-    ''')
-    
-    # 2. Provenance Log (Updated for V1.1 to store the Data Payload)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS provenance_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_key TEXT,
-            merkle_root TEXT,
-            stored_data TEXT,  -- New: Stores the full JSON batch
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(client_key) REFERENCES clients(api_key)
-        )
-    ''')
-    
-    cursor.execute("INSERT OR IGNORE INTO clients (api_key, organization_name, tier) VALUES (?, ?, ?)", 
-                   ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
-    
-    conn.commit()
-    conn.close()
-    print("AXON ARCH V1.1: Database initialized.")
+    """
+    Self-Healing Schema: Automatically creates tables on startup.
+    This replaces the need for manual SQL migrations for the MVP.
+    """
+    if not DB_URL:
+        print("--- WARNING: No DATABASE_URL found. Skipping DB Init. ---")
+        return
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # 1. Clients Table (Postgres Syntax)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS clients (
+                api_key TEXT PRIMARY KEY,
+                organization_name TEXT,
+                tier TEXT DEFAULT 'Gatekeeper',
+                active BOOLEAN DEFAULT TRUE
+            )
+        ''')
+        
+        # 2. Provenance Log (Postgres Syntax - using SERIAL for auto-increment)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS provenance_log (
+                id SERIAL PRIMARY KEY,
+                client_key TEXT,
+                merkle_root TEXT,
+                stored_data TEXT, 
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_key) REFERENCES clients(api_key)
+            )
+        ''')
+        
+        # 3. Seed the Admin Key (Idempotent: Only inserts if it doesn't exist)
+        cursor.execute('''
+            INSERT INTO clients (api_key, organization_name, tier) 
+            VALUES (%s, %s, %s)
+            ON CONFLICT (api_key) DO NOTHING
+        ''', ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
+        
+        conn.commit()
+        conn.close()
+        print("AXON ARCH | POSTGRESQL: Schema Initialized.")
+        
+    except Exception as e:
+        print(f"Schema Init Failed: {e}")
 
 class AxonDB:
     def __init__(self):
-        self.conn = sqlite3.connect(DB_NAME)
-        self.conn.row_factory = sqlite3.Row
+        self.conn = get_connection()
 
     def validate_key(self, api_key: str):
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM clients WHERE api_key = ? AND active = 1", (api_key,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+        # Note: Postgres uses %s for placeholders, not ?
+        cursor.execute("SELECT * FROM clients WHERE api_key = %s AND active = TRUE", (api_key,))
+        return cursor.fetchone()
 
     def log_seal(self, api_key: str, root_hash: str, data_payload: list) -> int:
         """Saves the Root AND the Data Batch."""
         cursor = self.conn.cursor()
-        data_json = json.dumps(data_payload) # Convert list to string
-        cursor.execute("INSERT INTO provenance_log (client_key, merkle_root, stored_data) VALUES (?, ?, ?)", 
-                       (api_key, root_hash, data_json))
+        data_json = json.dumps(data_payload)
+        
+        # RETURNING id is specific to Postgres to get the inserted row ID
+        cursor.execute(
+            "INSERT INTO provenance_log (client_key, merkle_root, stored_data) VALUES (%s, %s, %s) RETURNING id", 
+            (api_key, root_hash, data_json)
+        )
+        row_id = cursor.fetchone()['id']
         self.conn.commit()
-        return cursor.lastrowid
+        return row_id
 
     def get_batch_by_root(self, root_hash: str):
         """Retrieves the original data batch using the Seal ID."""
         cursor = self.conn.cursor()
-        cursor.execute("SELECT stored_data FROM provenance_log WHERE merkle_root = ?", (root_hash,))
+        cursor.execute("SELECT stored_data FROM provenance_log WHERE merkle_root = %s", (root_hash,))
         row = cursor.fetchone()
         return json.loads(row['stored_data']) if row else None
 
@@ -67,4 +104,5 @@ class AxonDB:
         self.conn.close()
 
 if __name__ == "__main__":
+    # If run locally, this will try to connect to the DB_URL in your .env
     init_db()

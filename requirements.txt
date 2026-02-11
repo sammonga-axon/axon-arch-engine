@@ -2,6 +2,5 @@ fastapi
 uvicorn
 requests
 pydantic
-streamlit
-pandas
-watchdog
+psycopg2-binary
+python-dotenv
