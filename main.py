@@ -1,99 +1,120 @@
-import os
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-from typing import List
-from merkle_engine import MerkleEngine
+from typing import List, Optional
+import os
+import uvicorn
+
+# IMPORT YOUR MODULES
 from database import AxonDB
+from merkle_engine import MerkleEngine  # Uses your HMAC Class
+from siem_engine import SovereignSentinel
 
-# --- CONFIGURATION ---
-# In Production (Render), set this variable in your Dashboard!
-SOVEREIGN_KEY = os.getenv("AXON_SOVEREIGN_KEY", "dev_secret_2026_default").encode()
-
-app = FastAPI(title="AXON ARCH | Sovereign Gateway V2.0 (HMAC)")
+# --- INIT ---
+app = FastAPI(title="AXON ARCH ENGINE", version="2.0.0")
+db = AxonDB()
+# We do not instantiate MerkleEngine globaly anymore because 
+# your class takes data in __init__
+sentinel = SovereignSentinel()
 
 # --- MODELS ---
 class SealRequest(BaseModel):
     data_items: List[str]
 
-class ProofRequest(BaseModel):
-    target_root: str
-    target_data: str
+class ValidateRequest(BaseModel):
+    merkle_root: str
+    data_fragment: str
 
-class VerifyRequest(BaseModel):
-    data: str
-    target_root: str
-    proof: List[dict]
-
-# --- AUTH ---
-def get_current_client(x_api_key: str = Header(...)):
-    db = AxonDB()
-    client = db.validate_key(x_api_key)
-    db.close()
-    if not client:
-        raise HTTPException(status_code=403, detail="Access Denied")
-    return client
+# --- STARTUP EVENT ---
+@app.on_event("startup")
+async def startup_event():
+    print("AXON ARCH | SYSTEM BOOT: Initializing Ledger...")
+    db.init_db()
 
 # --- ENDPOINTS ---
+@app.get("/")
+def health_check():
+    return {"status": "AXON_ARCH_ONLINE", "security": "HMAC_SHA256"}
 
 @app.post("/v1/seal")
-async def create_seal(payload: SealRequest, client: dict = Depends(get_current_client)):
-    # 1. Initialize Engine with the Sovereign Key
-    engine = MerkleEngine(payload.data_items, secret_key=SOVEREIGN_KEY)
-    
-    db = AxonDB()
-    # 2. Log the Seal (Standard Schema)
-    log_id = db.log_seal(client['api_key'], engine.root, payload.data_items)
-    db.close()
-    
-    return {
-        "status": "COMMITTED",
-        "seal_id": engine.root,
-        "count": len(payload.data_items),
-        "timestamp": "Synced"
-    }
+def seal_data(payload: SealRequest, x_api_key: Optional[str] = Header(None)):
+    """
+    1. Scan (SIEM)
+    2. Hash (HMAC Merkle)
+    3. Save (DB)
+    """
+    # 1. Security Check
+    if x_api_key != "SOVEREIGN_KEY_001": 
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED_ACCESS")
 
-@app.post("/v1/get_proof")
-async def generate_proof(payload: ProofRequest, client: dict = Depends(get_current_client)):
-    db = AxonDB()
-    batch = db.get_batch_by_root(payload.target_root)
-    db.close()
+    # 2. Sentinel Scan
+    for item in payload.data_items:
+        scan = sentinel.scan_payload(item)
+        if scan["status"] == "DETECTED":
+            raise HTTPException(status_code=403, detail=f"THREAT_DETECTED: {scan['type']}")
 
-    if not batch:
-        raise HTTPException(status_code=404, detail="Seal ID not found.")
-
-    if payload.target_data not in batch:
-        raise HTTPException(status_code=400, detail="Data not found in this Seal.")
-
-    # Rebuild the engine with the SAME key to reproduce the tree
-    engine = MerkleEngine(batch, secret_key=SOVEREIGN_KEY)
-    
-    # Find index and generate proof
-    target_hash = engine.hash_data(payload.target_data)
-    
+    # 3. Merkle Hashing (USING YOUR CLASS)
+    # We initialize the engine with data, it automatically looks for the ENV Key
     try:
-        index = engine.leaves.index(target_hash)
-    except ValueError:
-        raise HTTPException(status_code=500, detail="CRITICAL: Hash mismatch. Integrity compromised.")
-    
-    proof = engine.get_proof(index)
-    
-    return {
-        "target_data": payload.target_data,
-        "proof": proof
-    }
+        engine = MerkleEngine(data_blocks=payload.data_items)
+        root_hash = engine.root
+    except Exception as e:
+        print(f"MERKLE ERROR: {e}")
+        raise HTTPException(status_code=500, detail="HASH_CALCULATION_FAILED")
 
-@app.post("/v1/verify")
-async def verify_integrity(payload: VerifyRequest, client: dict = Depends(get_current_client)):
-    # Stateless Verification
-    is_valid = MerkleEngine.verify_proof(
-        payload.data, 
-        payload.proof, 
-        payload.target_root, 
-        secret_key=SOVEREIGN_KEY
+    # 4. Persistence
+    try:
+        db.log_seal(x_api_key, root_hash, payload.data_items)
+        return {
+            "status": "SEALED",
+            "seal_id": root_hash,
+            "integrity": "HMAC-SHA256"
+        }
+    except Exception as e:
+        print(f"DB ERROR: {e}")
+        raise HTTPException(status_code=500, detail="LEDGER_WRITE_FAILED")
+
+@app.post("/v1/validate")
+def validate_integrity(payload: ValidateRequest, x_api_key: Optional[str] = Header(None)):
+    """
+    THE AUDIT LOGIC:
+    1. Check DB for Provenance (Did we seal this?)
+    2. Check HMAC for Integrity (Does the math match?)
+    """
+    print(f"AUDIT REQUEST: Checking Root {payload.merkle_root}")
+
+    # STEP 1: PROVENANCE CHECK (Database)
+    record = db.verify_integrity(payload.merkle_root)
+    
+    if not record:
+        return {
+            "verified": False,
+            "status": "PROVENANCE_MISSING",
+            "detail": "Root Hash not found in Immutable Ledger."
+        }
+
+    # STEP 2: MATHEMATICAL CHECK (HMAC)
+    # We use your static verify_proof method.
+    # For a simple 'Data vs Root' check (Single Item), the proof list is empty [].
+    # Your class will automatically pull the AXON_SOVEREIGN_KEY from Env to verify.
+    
+    is_valid_math = MerkleEngine.verify_proof(
+        data=payload.data_fragment,
+        proof=[], # Empty proof for single-item verification
+        target_root=payload.merkle_root
     )
 
-    if is_valid:
-        return {"verified": True, "integrity": "SECURE", "intent": "TRUTH"}
+    if is_valid_math:
+        return {
+            "verified": True,
+            "status": "VERIFIED_SECURE",
+            "timestamp": str(record['timestamp'])
+        }
     else:
-        # Intent Invalidation Signal
-        return {"verified": False, "integrity": "COMPROMISED", "intent": "POISONING"}
+        return {
+            "verified": False,
+            "status": "INTEGRITY_FAILURE",
+            "detail": "Math does not match. Data may be altered or Key Mismatch."
+        }
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=10000)
