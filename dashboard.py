@@ -122,11 +122,13 @@ with tab2:
                 threats_found = [sentinel.scan_payload(item) for item in items if sentinel.scan_payload(item)["status"] == "DETECTED"]
                 clean_items = [item for item in items if sentinel.scan_payload(item)["status"] != "DETECTED"]
                 
+                # 1. LOCAL BLOCK (Client-Side)
                 if threats_found:
-                    st.error(f"🚨 ADVERSARIAL ATTACK DETECTED")
+                    st.error(f"🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)")
                     for threat in threats_found:
                         st.markdown(f'<div class="verdict-fail">⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br><span style="font-size:14px; font-weight:normal; color:#b91c1c;">Threat Pattern: {threat["type"]}<br>Action: BLOCKED</span></div>', unsafe_allow_html=True)
                 
+                # 2. SERVER REQUEST (For clean items or if filters are bypassed)
                 if clean_items:
                     core_start = time.perf_counter()
                     for item in clean_items:
@@ -141,13 +143,23 @@ with tab2:
                     
                     try:
                         res = requests.post(f"{API_URL}/v1/seal", json={"data_items": clean_items}, headers={"x-api-key": API_KEY})
+                        
                         if res.status_code == 200:
+                            # SUCCESS
                             seal_id = res.json()['seal_id']
                             st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br><span style="font-size:14px; font-weight:normal; color:#15803d;">Deep Packet Inspection Complete. Sealed to Immutable Ledger.<br>Core Latency: {new_latency_text}</span></div>', unsafe_allow_html=True)
                             st.markdown("### 🔑 Cryptographic Proof:")
                             st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
+                        
+                        elif res.status_code == 403:
+                            # SECURITY BLOCK (SERVER-SIDE)
+                            st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
+                            st.markdown(f'<div class="verdict-fail">⛔ SERVER VERDICT: <span style="color: #dc2626; font-weight: 800;">DENIED (403)</span> <br>The Cloud API detected a malicious payload that bypassed local filters.</div>', unsafe_allow_html=True)
+                        
                         else:
-                            st.error(f"Cloud Engine Busy: {res.status_code}. Verify database logs on Render.")
+                            # OTHER ERRORS
+                            st.error(f"Cloud Engine Error: {res.status_code}")
+                            
                     except Exception as e:
                         st.error(f"Network Timeout: Ensure Render service is awake.")
 
