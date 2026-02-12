@@ -17,22 +17,23 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: FIXED ALIGNMENT & BUTTON SAFETY ---
+# --- CSS: SAFE ALIGNMENT (The Fix) ---
 st.markdown("""
     <style>
-    /* 1. Reset Global Theme */
+    /* 1. Global Theme */
     .stApp { background-color: #ffffff !important; }
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     h1, h2, h3, h4, h5, h6, p, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     textarea, input { color: #0f172a !important; background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
     header[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0; }
     
-    /* 2. SAFE UPLIFT: Reduced from -3.8rem to -2rem to prevent Button Collision */
+    /* 2. SAFE UPLIFT: Adjusted to -2rem. 
+       This aligns the Title with the Logo but prevents the Buttons from being covered. */
     [data-testid="stVerticalBlock"] > div:first-child {
         margin-top: -2rem !important;
     }
 
-    /* 3. Visual Components */
+    /* 3. Visual Elements */
     .hash-box { background-color: #ffffff !important; color: #0f172a !important; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-top: 5px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
     .verdict-success { color: #0f172a !important; font-weight: 600 !important; background-color: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 10px; }
     .verdict-fail { color: #0f172a !important; font-weight: 600 !important; background-color: #fef2f2; padding: 15px; border-radius: 6px; border: 1px solid #fecaca; margin-top: 10px; }
@@ -70,7 +71,7 @@ def clear_audit_console():
     st.session_state.audit_root = ""
     st.session_state.audit_data = ""
 
-# --- SIDEBAR (Restructured for Visibility) ---
+# --- SIDEBAR (Reordered for Visibility) ---
 with st.sidebar:
     # 1. LOGO
     try:
@@ -80,13 +81,13 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 2. STATUS (Top Priority)
+    # 2. STATUS
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
-    # 3. VERIFIED BADGE (MOVED UP - Was at bottom)
-    st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 20px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
-
+    # 3. VERIFIED BADGE (Moved UP to be safe)
+    st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 15px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
+    
     st.markdown("---")
     
     # 4. LATENCY
@@ -96,7 +97,7 @@ with st.sidebar:
     
     st.markdown("---")
 
-    # 5. STORAGE INFO (Moved to Bottom)
+    # 5. STORAGE INFO (Moved Down)
     st.markdown("""
         <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Storage Layer</strong></div>
         <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a; margin-bottom: 12px;">Vector DB: Pinecone/Weaviate</div>
@@ -104,7 +105,7 @@ with st.sidebar:
         <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a;">Engine: Merkle-Tree (HMAC)</div>
     """, unsafe_allow_html=True)
 
-# --- HEADER (Safe Alignment) ---
+# --- HEADER (Right Side Aligned) ---
 c1, c2 = st.columns([5, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
@@ -135,12 +136,12 @@ with tab1:
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
-    # Use [5,1] ratio to give buttons more breathing room
+    # Use [5,1] ratio to give buttons more space
     c_input, c_btn = st.columns([5, 1])
     with c_input:
         st.subheader("Inject Data into AI Memory Stream")
     with c_btn:
-        st.write("") # Spacer to push button down slightly if needed
+        st.write("") # Spacer to prevent black overlap
         st.button("🔄 New Session", on_click=clear_seal_console, help="Clear console.")
 
     data_to_seal = st.text_area("Input Vector / Context Chunk:", 
@@ -186,7 +187,7 @@ with tab3:
     with c_aud_head:
         st.subheader("Model Weight & Data Audit")
     with c_aud_btn:
-        st.write("") 
+        st.write("") # Spacer to prevent black overlap
         st.button("🔄 Reset Console", on_click=clear_audit_console)
 
     target_root = st.text_input("Enter Merkle Root Hash:", key="audit_root")
