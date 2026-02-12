@@ -27,14 +27,20 @@ st.markdown("""
     textarea, input { color: #0f172a !important; background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
     header[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0; }
     
-    /* 2. Visual Elements */
+    /* 2. UPLIFT FIX: Remove default top padding to pull everything up */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 5rem !important;
+    }
+
+    /* 3. Visual Elements */
     .hash-box { background-color: #ffffff !important; color: #0f172a !important; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-top: 5px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
     .verdict-success { color: #0f172a !important; font-weight: 600 !important; background-color: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 10px; }
     .verdict-fail { color: #0f172a !important; font-weight: 600 !important; background-color: #fef2f2; padding: 15px; border-radius: 6px; border: 1px solid #fecaca; margin-top: 10px; }
     .latency-box { background-color: #e2e8f0; color: #0f172a; padding: 8px 12px; border-radius: 5px; font-family: 'Source Code Pro', monospace; font-size: 14px; border: 1px solid #cbd5e1; }
     .verified-badge { background-color: #dcfce7; color: #166534 !important; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 600; border: 1px solid #bbf7d0; }
 
-    /* 3. BUTTONS */
+    /* 4. BUTTONS */
     div[data-testid="stButton"] > button {
         background-color: #ffffff !important;
         color: #0f172a !important;
@@ -71,18 +77,16 @@ def clear_audit_console():
 with st.sidebar:
     # 1. LOGO & BRANDING
     try:
-        # Tries to load the logo. If missing, skips gracefully.
         st.image("graphic.webp", use_column_width=True)
     except:
         st.warning("Logo not found: Ensure 'graphic.webp' is in root.")
 
     st.markdown("---")
     
-    # 2. SENTINEL STATUS & LATENCY (Pulled Up)
+    # 2. SENTINEL STATUS & LATENCY (High Visibility)
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
-    # Latency moved UP for visibility
     st.caption("Engine Latency (Live):")
     sidebar_latency_placeholder = st.empty()
     sidebar_latency_placeholder.markdown(f'<div class="latency-box">{st.session_state.last_latency}</div>', unsafe_allow_html=True)
@@ -107,7 +111,6 @@ with c1:
     st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v2.1.0 (Enterprise)")
 
 with c2:
-    # Header Latency Metric
     latency_metric_placeholder = st.empty()
     latency_metric_placeholder.metric("Inference Latency", st.session_state.last_latency, delta="Target < 5ms")
 
@@ -135,10 +138,8 @@ with tab2:
     with c_input:
         st.subheader("Inject Data into AI Memory Stream")
     with c_btn:
-        # THE REFRESH BUTTON
         st.button("🔄 New Session", on_click=clear_seal_console, help="Clear console to prevent data leaks.")
 
-    # Bound to session_state['seal_input']
     data_to_seal = st.text_area("Input Vector / Context Chunk:", 
                                 key="seal_input",
                                 placeholder="EXAMPLE DATA: 'Vector_Embedding_Array: [0.002, 0.991, -0.221]'", 
@@ -169,7 +170,6 @@ with tab2:
                     
                     new_latency_text = f"{core_latency:.4f} ms"
                     st.session_state.last_latency = new_latency_text
-                    # Update metrics
                     latency_metric_placeholder.metric("Inference Latency", new_latency_text, delta="Target < 5ms")
                     sidebar_latency_placeholder.markdown(f'<div class="latency-box">{new_latency_text}</div>', unsafe_allow_html=True)
                     
@@ -181,13 +181,11 @@ with tab2:
                             st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br><span style="font-size:14px; font-weight:normal; color:#15803d;">Deep Packet Inspection Complete. Sealed to Immutable Ledger.<br>Core Latency: {new_latency_text}</span></div>', unsafe_allow_html=True)
                             st.markdown("### 🔑 Cryptographic Proof:")
                             st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
-                        
                         elif res.status_code == 403:
                             st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
                             st.markdown(f'<div class="verdict-fail">⛔ SERVER VERDICT: <span style="color: #dc2626; font-weight: 800;">DENIED (403)</span> <br>The Cloud API detected a malicious payload.</div>', unsafe_allow_html=True)
                         else:
                             st.error(f"Cloud Engine Error: {res.status_code}")
-                            
                     except Exception as e:
                         st.error(f"Network Timeout: Ensure Render service is awake.")
 
