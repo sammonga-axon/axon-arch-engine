@@ -17,7 +17,7 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: SURGICAL ALIGNMENT ---
+# --- CSS: FIXED ALIGNMENT & BUTTON SAFETY ---
 st.markdown("""
     <style>
     /* 1. Reset Global Theme */
@@ -27,9 +27,9 @@ st.markdown("""
     textarea, input { color: #0f172a !important; background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
     header[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0; }
     
-    /* 2. PRECISION UPLIFT: Only pull the right-side content block up */
+    /* 2. SAFE UPLIFT: Reduced from -3.8rem to -2rem to prevent Button Collision */
     [data-testid="stVerticalBlock"] > div:first-child {
-        margin-top: -3.8rem !important;
+        margin-top: -2rem !important;
     }
 
     /* 3. Visual Components */
@@ -70,33 +70,41 @@ def clear_audit_console():
     st.session_state.audit_root = ""
     st.session_state.audit_data = ""
 
-# --- SIDEBAR (Left Side Stays Put) ---
+# --- SIDEBAR (Restructured for Visibility) ---
 with st.sidebar:
+    # 1. LOGO
     try:
         st.image("graphic.webp", use_column_width=True)
     except:
         st.warning("Logo not found.")
 
     st.markdown("---")
+    
+    # 2. STATUS (Top Priority)
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
+    # 3. VERIFIED BADGE (MOVED UP - Was at bottom)
+    st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 20px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+    
+    # 4. LATENCY
     st.caption("Engine Latency (Live):")
     sidebar_latency_placeholder = st.empty()
     sidebar_latency_placeholder.markdown(f'<div class="latency-box">{st.session_state.last_latency}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
+
+    # 5. STORAGE INFO (Moved to Bottom)
     st.markdown("""
         <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Storage Layer</strong></div>
         <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a; margin-bottom: 12px;">Vector DB: Pinecone/Weaviate</div>
         <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Integrity Core</strong></div>
         <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a;">Engine: Merkle-Tree (HMAC)</div>
     """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
 
-# --- HEADER (Right Side Pulled Up) ---
+# --- HEADER (Safe Alignment) ---
 c1, c2 = st.columns([5, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
@@ -109,7 +117,7 @@ with c2:
 # --- TABS ---
 tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "🧬 Forensic DNA"])
 
-# --- TAB 1: OVERVIEW (RESTORED TABLE) ---
+# --- TAB 1: OVERVIEW ---
 with tab1:
     col1, col2, col3 = st.columns(3)
     col1.metric("Vectors Secured", "14.2M")
@@ -127,11 +135,13 @@ with tab1:
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
-    c_input, c_btn = st.columns([4, 1])
+    # Use [5,1] ratio to give buttons more breathing room
+    c_input, c_btn = st.columns([5, 1])
     with c_input:
         st.subheader("Inject Data into AI Memory Stream")
     with c_btn:
-        st.button("🔄 New Session", on_click=clear_seal_console)
+        st.write("") # Spacer to push button down slightly if needed
+        st.button("🔄 New Session", on_click=clear_seal_console, help="Clear console.")
 
     data_to_seal = st.text_area("Input Vector / Context Chunk:", 
                                 key="seal_input",
@@ -172,10 +182,11 @@ with tab2:
 
 # --- TAB 3: AUDIT ---
 with tab3:
-    c_aud_head, c_aud_btn = st.columns([4, 1])
+    c_aud_head, c_aud_btn = st.columns([5, 1])
     with c_aud_head:
         st.subheader("Model Weight & Data Audit")
     with c_aud_btn:
+        st.write("") 
         st.button("🔄 Reset Console", on_click=clear_audit_console)
 
     target_root = st.text_input("Enter Merkle Root Hash:", key="audit_root")
