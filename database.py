@@ -35,10 +35,9 @@ class AxonDB:
         self.conn.commit()
 
     def init_db(self):
-        """Universal Schema Init for both Cloud and Local"""
         cursor = self.get_cursor()
         
-        # SQL Syntax differs slightly, but this works for both for simple tables
+        # POSTGRES SCHEMA
         if self.mode == "POSTGRES":
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS clients (
@@ -64,7 +63,8 @@ class AxonDB:
                 ON CONFLICT (api_key) DO NOTHING
             ''', ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
             
-        else: # SQLITE MODE
+        # SQLITE SCHEMA
+        else: 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS clients (
                     api_key TEXT PRIMARY KEY,
@@ -89,7 +89,7 @@ class AxonDB:
                     VALUES (?, ?, ?)
                 ''', ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
             except sqlite3.IntegrityError:
-                pass # Already exists
+                pass 
 
         self.commit()
         print(f"AXON ARCH | {self.mode}: Schema Initialized.")
@@ -117,11 +117,27 @@ class AxonDB:
             )
             return cursor.lastrowid
 
+    # --- THIS WAS MISSING: THE AUDIT LOOKUP FUNCTION ---
+    def verify_integrity(self, root_hash: str):
+        cursor = self.get_cursor()
+        print(f"DEBUG: Searching for Root Hash: {root_hash}")
+        
+        if self.mode == "POSTGRES":
+            cursor.execute("SELECT * FROM provenance_log WHERE merkle_root = %s", (root_hash,))
+        else:
+            cursor.execute("SELECT * FROM provenance_log WHERE merkle_root = ?", (root_hash,))
+            
+        result = cursor.fetchone()
+        if result:
+            print("DEBUG: Hash FOUND in Ledger.")
+        else:
+            print("DEBUG: Hash NOT FOUND.")
+        return result
+
     def close(self):
         if self.conn:
             self.conn.close()
 
-# STANDALONE INIT
 if __name__ == "__main__":
     db = AxonDB()
     db.init_db()
