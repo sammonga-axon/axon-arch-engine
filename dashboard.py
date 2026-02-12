@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
-# These must exist in the same repository folder
 from axon_sdk import AxonGuard
 from merkle_engine import MerkleEngine 
 from siem_engine import SovereignSentinel 
@@ -10,29 +9,52 @@ from siem_engine import SovereignSentinel
 # --- CONFIGURATION ---
 st.set_page_config(page_title="AXON ARCH | AI Memory Defense", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# This URL and Key are now universal for Local and Cloud demo
 API_URL = "https://axon-arch-engine.onrender.com" 
 API_KEY = "SOVEREIGN_KEY_001"
 
-# Initialize Engines
 guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
-local_merkle = MerkleEngine() # Initialized once for local benchmarking
+local_merkle = MerkleEngine()
 
-# --- CSS: FINAL VISUAL POLISH (Unified White Theme) ---
+# --- CSS: GLOBAL STYLES & BUTTON FIX ---
 st.markdown("""
     <style>
+    /* 1. Global Theme */
     .stApp { background-color: #ffffff !important; }
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     h1, h2, h3, h4, h5, h6, p, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     textarea, input { color: #0f172a !important; background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
     header[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0; }
-    button[kind="header"] { color: #0f172a !important; }
+    
+    /* 2. Visual Elements */
     .hash-box { background-color: #ffffff !important; color: #0f172a !important; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-top: 5px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
     .verdict-success { color: #0f172a !important; font-weight: 600 !important; background-color: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 10px; }
     .verdict-fail { color: #0f172a !important; font-weight: 600 !important; background-color: #fef2f2; padding: 15px; border-radius: 6px; border: 1px solid #fecaca; margin-top: 10px; }
     .latency-box { background-color: #e2e8f0; color: #0f172a; padding: 8px 12px; border-radius: 5px; font-family: 'Source Code Pro', monospace; font-size: 14px; border: 1px solid #cbd5e1; }
     .verified-badge { background-color: #dcfce7; color: #166534 !important; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 600; border: 1px solid #bbf7d0; }
+
+    /* 3. BUTTONS - FORCED VISIBILITY FIX */
+    div[data-testid="stButton"] > button {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        font-weight: 600 !important;
+        width: 100% !important;
+        height: 45px !important;
+        transition: all 0.2s ease;
+    }
+    div[data-testid="stButton"] > button:hover {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        border-color: #0f172a !important;
+    }
+    div[data-testid="stButton"] > button:active, div[data-testid="stButton"] > button:focus {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
@@ -106,7 +128,6 @@ with tab2:
                         st.markdown(f'<div class="verdict-fail">⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br><span style="font-size:14px; font-weight:normal; color:#b91c1c;">Threat Pattern: {threat["type"]}<br>Action: BLOCKED</span></div>', unsafe_allow_html=True)
                 
                 if clean_items:
-                    # LOCAL LATENCY BENCHMARK (Merkle Simulation)
                     core_start = time.perf_counter()
                     for item in clean_items:
                         local_merkle.hash_data(item)
@@ -118,7 +139,6 @@ with tab2:
                     latency_metric_placeholder.metric("Inference Latency", new_latency_text, delta="Target < 5ms")
                     sidebar_latency_placeholder.markdown(f'<div class="latency-box">{new_latency_text}</div>', unsafe_allow_html=True)
                     
-                    # CLOUD COMMITMENT (Render API)
                     try:
                         res = requests.post(f"{API_URL}/v1/seal", json={"data_items": clean_items}, headers={"x-api-key": API_KEY})
                         if res.status_code == 200:
