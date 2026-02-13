@@ -32,14 +32,13 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     h1, h2, h3, h4, h5, h6, p, li, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     
-    /* 3. INPUT FIELDS (THE FIX: Target the Container, not just the text) */
+    /* 3. INPUT FIELDS */
     div[data-baseweb="base-input"], .stTextArea textarea, .stTextInput input {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         color: #0f172a !important;
         border-radius: 4px !important;
     }
-    /* Force typed text to be black */
     input, textarea {
         color: #000000 !important;
         caret-color: #000000 !important;
@@ -125,6 +124,8 @@ st.markdown("""
 # --- STATE MANAGEMENT ---
 if 'last_latency' not in st.session_state: 
     st.session_state.last_latency = "0.0000 ms"
+if 'packet_log' not in st.session_state:
+    st.session_state.packet_log = []
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -142,8 +143,8 @@ with st.sidebar:
 
     st.markdown("---")
     
-    st.header("Sentinel Status")
-    st.success("AI Firewall: ONLINE")
+    st.header("SENTINEL STATUS")
+    st.success("AI FIREWALL: ONLINE")
     
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
@@ -154,7 +155,7 @@ with st.sidebar:
     
     st.markdown("---")
 
-    st.markdown("### 🛡️ Active Protocols")
+    st.markdown("### 🛡️ SIEM Active Protocols")
     st.markdown("""
         <div style="font-size: 13px; margin-bottom: 6px;">✅ SQL Injection <span style="color:#64748b">(Pattern)</span></div>
         <div style="font-size: 13px; margin-bottom: 6px;">✅ XSS Payloads <span style="color:#64748b">(Sanitize)</span></div>
@@ -165,7 +166,7 @@ with st.sidebar:
 # --- HEADER ---
 c1, c2 = st.columns([3, 1]) 
 with c1:
-    st.title("🛡️ AXON ARCH | AI Memory Defense")
+    st.markdown("<h3 style='margin-top: 0px; margin-bottom: 0px;'>🛡️ AXON ARCH | AI Memory Defense</h3>", unsafe_allow_html=True)
     st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.8.0 (Enterprise)")
 
 with c2:
@@ -183,18 +184,20 @@ tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "
 # --- TAB 1: OVERVIEW ---
 with tab1:
     col1, col2, col3 = st.columns(3)
-    col1.metric("Vectors Secured", "14.2M")
-    col2.metric("Threats Neutralized", "42")
+    
+    # Calculate dynamic metrics
+    clean_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'CLEAN'])
+    quarantine_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'QUARANTINED'])
+    
+    col1.metric("Vectors Secured", f"{14200000 + clean_count:,}")
+    col2.metric("Threats Neutralized", f"{42 + quarantine_count}")
     col3.metric("Model Integrity", "100%", delta="HMAC-SHA256 Verified")
     
     st.markdown("### 📡 Real-Time Packet Analysis")
-    siem_data = pd.DataFrame({
-        'Timestamp': ['14:02:01', '14:02:05', '14:03:12'],
-        'Origin': ['LLM_Inference_Node', 'RAG_Pipeline_04', 'External_API'],
-        'Payload_Hash': ['a1b2...99x', 'System Override...', 'Standard_Query'],
-        'Defense_Action': ['CLEAN', 'QUARANTINED', 'CLEAN']
-    })
-    st.table(siem_data)
+    if not st.session_state.packet_log:
+        st.info("Awaiting live network traffic... Inject a vector to populate telemetry.")
+    else:
+        st.dataframe(pd.DataFrame(st.session_state.packet_log).tail(6), use_container_width=True)
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
@@ -216,11 +219,16 @@ with tab2:
                     threat = sentinel.scan_payload(clean_input)
                     
                     if threat["status"] == "DETECTED":
+                         # Append to SIEM Log dynamically
+                         st.session_state.packet_log.append({'Timestamp': time.strftime('%H:%M:%S'), 'Origin': 'External_UI', 'Payload_Hash': 'MALICIOUS_PAYLOAD', 'Defense_Action': 'QUARANTINED'})
                          st.markdown(f'<div class="verdict-fail">🚨 MALWARE DETECTED<br>Type: {threat["type"]}<br>Status: QUARANTINED</div>', unsafe_allow_html=True)
                     else:
                         core_start = time.perf_counter()
-                        _ = hashlib.sha256(clean_input.encode()).hexdigest()
+                        payload_hash = hashlib.sha256(clean_input.encode()).hexdigest()
                         core_end = time.perf_counter()
+                        
+                        # Append to SIEM Log dynamically
+                        st.session_state.packet_log.append({'Timestamp': time.strftime('%H:%M:%S'), 'Origin': 'External_UI', 'Payload_Hash': payload_hash[:16] + '...', 'Defense_Action': 'CLEAN'})
                         
                         new_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         st.session_state.last_latency = new_latency
@@ -231,8 +239,10 @@ with tab2:
                             </div>
                         """, unsafe_allow_html=True)
                         
+                        # Dynamic explicit success message
+                        st.markdown('<div style="color: #166534; font-weight: 700; margin-top: 10px; margin-bottom: 10px; padding: 10px; border: 1px solid #bbf7d0; border-radius: 5px; background-color: #dcfce7;">🛡️ SIEM Adversarial Check: Threat Not Detected</div>', unsafe_allow_html=True)
+                        
                         try:
-                            # Added Timeout to prevent infinite hanging
                             res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY}, timeout=15)
                             
                             if res.status_code == 200:
@@ -247,15 +257,15 @@ with tab2:
                                     </div>
                                 """, unsafe_allow_html=True)
                                 st.markdown("### 🔑 Cryptographic Proof:")
+                                # Massively increased font size for the Seal ID
                                 st.markdown(f"""
-                                    <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'JetBrains Mono'; font-size: 13px; color: #334155;">
+                                    <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; border: 2px solid #94a3b8; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: #0f172a; word-break: break-all; text-align: center; letter-spacing: 1px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
                                         {seal_id}
                                     </div>
                                 """, unsafe_allow_html=True)
                             elif res.status_code == 403:
                                 st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED (API Key Invalid)")
                             else:
-                                # SHOW THE ERROR for debugging
                                 st.error(f"Cloud Engine Error: {res.status_code} - {res.text}")
                         except Exception as e:
                             st.error(f"Connection Failed: {str(e)}")
