@@ -18,7 +18,7 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: VISUAL SURGERY (FIXED INPUTS & TABLES) ---
+# --- CSS: VISUAL SURGERY (FIXED INPUTS) ---
 st.markdown("""
     <style>
     /* 1. LAYOUT SPACING */
@@ -118,11 +118,6 @@ st.markdown("""
     div[data-testid="stSidebarUserContent"] {
         padding-top: 0rem !important;
     }
-
-    /* 7. TABLE SURGERY */
-    [data-testid="stTable"] { background-color: #ffffff !important; border-radius: 8px !important; overflow: hidden !important; border: 1px solid #cbd5e1 !important; }
-    th { background-color: #f8fafc !important; color: #0f172a !important; font-weight: 700 !important; border-bottom: 2px solid #cbd5e1 !important; }
-    td { background-color: #ffffff !important; color: #334155 !important; border-bottom: 1px solid #e2e8f0 !important; font-family: 'JetBrains Mono', monospace; font-size: 13px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -134,7 +129,7 @@ if 'packet_log' not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 🏗️ Core Architecture")
+    st.markdown("### 🏗️ CORE ARCHITECTURE")
     st.markdown("""
         <div style="background: #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
             <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Storage Layer</div>
@@ -171,7 +166,7 @@ with st.sidebar:
 # --- HEADER ---
 c1, c2 = st.columns([3, 1]) 
 with c1:
-    st.markdown("<h3 style='margin-top: 0px; margin-bottom: 0px;'>🛡️ AXON ARCH | AI Memory Defense</h3>", unsafe_allow_html=True)
+    st.markdown("<h2 style='margin-top: 0px; margin-bottom: 0px;'>🛡️ AXON ARCH | AI Memory Defense</h2>", unsafe_allow_html=True)
     st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.8.0 (Enterprise)")
 
 with c2:
@@ -202,7 +197,7 @@ with tab1:
     if not st.session_state.packet_log:
         st.info("Awaiting live network traffic... Inject a vector to populate telemetry.")
     else:
-        st.table(pd.DataFrame(st.session_state.packet_log).tail(6))
+        st.dataframe(pd.DataFrame(st.session_state.packet_log).tail(6), use_container_width=True)
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
