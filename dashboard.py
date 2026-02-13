@@ -13,18 +13,19 @@ st.set_page_config(page_title="AXON ARCH | AI Memory Defense", layout="wide", pa
 API_URL = "https://axon-arch-engine.onrender.com" 
 API_KEY = "SOVEREIGN_KEY_001"
 
+# Initialize Engines
 guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: HIGH CONTRAST THEME ENFORCER ---
+# --- CSS: HIGH CONTRAST & ELEMENT OVERRIDES ---
 st.markdown("""
     <style>
-    /* 1. FORCE LIGHT MODE (Overrides System Dark Mode) */
+    /* 1. FORCE LIGHT MODE BACKGROUNDS */
     .stApp { background-color: #ffffff !important; }
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     
-    /* 2. FORCE TEXT COLORS (Fixes Invisible Cursor) */
+    /* 2. FORCE TEXT COLORS (Global Override) */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     
     /* 3. INPUT FIELDS (Explicit White Background + Black Text) */
@@ -33,10 +34,10 @@ st.markdown("""
         background-color: #ffffff !important;
         border: 1px solid #94a3b8 !important;
         font-family: 'JetBrains Mono', monospace !important;
-        caret-color: #000000 !important; /* Force Cursor Black */
+        caret-color: #000000 !important;
     }
     
-    /* 4. BUTTONS (Force White with Dark Text) */
+    /* 4. BUTTONS - AGGRESSIVE OVERRIDE */
     div[data-testid="stButton"] > button {
         background-color: #ffffff !important;
         color: #0f172a !important;
@@ -47,10 +48,15 @@ st.markdown("""
         width: 100% !important;
         transition: all 0.2s ease;
     }
+    /* Force text inside button to be dark */
+    div[data-testid="stButton"] > button p {
+        color: #0f172a !important;
+    }
     div[data-testid="stButton"] > button:hover {
         background-color: #f1f5f9 !important;
         border-color: #0f172a !important;
-        color: #0f172a !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     /* 5. Custom Alert Boxes */
@@ -86,7 +92,8 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT ---
-if 'last_latency' not in st.session_state: st.session_state.last_latency = "0.00 ms"
+if 'last_latency' not in st.session_state: 
+    st.session_state.last_latency = "0.00 ms"
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -105,7 +112,7 @@ with st.sidebar:
     
     st.markdown("---")
 
-    # SIEM List (Restored)
+    # SIEM List
     st.markdown("### 🛡️ Defense Protocols")
     st.markdown("""
         <div class="siem-item"><span class="siem-check">✓</span> SQL Injection (Pattern)</div>
@@ -116,7 +123,7 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # Latency moved to bottom to prevent overlapping
+    # Bottom Latency Display
     st.metric("Engine Latency", st.session_state.last_latency)
 
 # --- HEADER ---
@@ -126,7 +133,9 @@ with c1:
     st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.6.0 (High Contrast)")
 
 with c2:
-    st.metric("Latency", st.session_state.last_latency, delta="Target < 5ms")
+    # PLACEHOLDER: This ensures we can update the metric immediately after calculation
+    latency_container = st.empty()
+    latency_container.metric("Latency", st.session_state.last_latency, delta="Target < 5ms")
 
 # --- TABS ---
 tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "🧬 Forensic DNA"])
@@ -164,17 +173,26 @@ with tab2:
                 items = [clean_input]
                 
                 with st.spinner("Sentinel analyzing..."):
+                    # 1. Local SIEM Check
                     threat = sentinel.scan_payload(clean_input)
+                    
                     if threat["status"] == "DETECTED":
                          st.markdown(f'<div class="verdict-fail">🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)<br>Threat: {threat["type"]}<br>Action: BLOCKED</div>', unsafe_allow_html=True)
                     else:
+                        # 2. Benchmark Latency (Math)
                         core_start = time.perf_counter()
                         _ = hashlib.sha256(clean_input.encode()).hexdigest()
                         core_end = time.perf_counter()
-                        st.session_state.last_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         
+                        # UPDATE STATE & UI IMMEDIATELY
+                        new_latency = f"{(core_end - core_start) * 1000:.4f} ms"
+                        st.session_state.last_latency = new_latency
+                        latency_container.metric("Latency", new_latency, delta="Target < 5ms")
+                        
+                        # 3. Cloud Seal
                         try:
                             res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY})
+                            
                             if res.status_code == 200:
                                 seal_id = res.json()['seal_id']
                                 st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: GRANTED<br>Deep Packet Inspection Complete. Sealed to Immutable Ledger.</div>', unsafe_allow_html=True)
