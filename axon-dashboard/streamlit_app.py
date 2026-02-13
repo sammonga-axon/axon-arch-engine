@@ -243,7 +243,7 @@ with tab2:
                         st.markdown('<div style="color: #166534; font-weight: 700; margin-top: 10px; margin-bottom: 10px; padding: 10px; border: 1px solid #bbf7d0; border-radius: 5px; background-color: #dcfce7;">🛡️ SIEM Adversarial Check: Threat Not Detected</div>', unsafe_allow_html=True)
                         
                         try:
-                            res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY}, timeout=15)
+                            res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY}, timeout=60)
                             
                             if res.status_code == 200:
                                 seal_id = res.json()['seal_id']
