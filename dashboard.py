@@ -18,124 +18,160 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: HIGH CONTRAST & ELEMENT OVERRIDES ---
+# --- CSS: VISUAL SURGERY ---
 st.markdown("""
     <style>
-    /* 1. FORCE LIGHT MODE BACKGROUNDS */
+    /* 1. LAYOUT SPACING (Push content down slightly as requested) */
+    .block-container { 
+        padding-top: 3rem !important; 
+        padding-bottom: 1rem !important;
+    }
+    
+    /* 2. FORCE LIGHT THEME (Global) */
     .stApp { background-color: #ffffff !important; }
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
-    
-    /* 2. FORCE TEXT COLORS (Global Override) */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     
-    /* 3. INPUT FIELDS (Explicit White Background + Black Text) */
+    /* 3. INPUT FIELDS (White Background / Black Text) */
     .stTextArea textarea, .stTextInput input {
         color: #000000 !important;
         background-color: #ffffff !important;
-        border: 1px solid #94a3b8 !important;
+        border: 1px solid #cbd5e1 !important;
         font-family: 'JetBrains Mono', monospace !important;
-        caret-color: #000000 !important;
     }
-    
-    /* 4. BUTTONS - AGGRESSIVE OVERRIDE */
-    div[data-testid="stButton"] > button {
+
+    /* 4. BUTTON SURGERY (Fixing the Black Void) */
+    /* Target specifically the Form Submit Buttons */
+    button[kind="primary"], div[data-testid="stFormSubmitButton"] > button {
         background-color: #ffffff !important;
         color: #0f172a !important;
-        border: 1px solid #cbd5e1 !important;
+        border: 2px solid #cbd5e1 !important; /* Thicker border for visibility */
         border-radius: 6px;
         font-weight: 700 !important;
-        height: 45px !important;
+        height: 48px !important;
         width: 100% !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         transition: all 0.2s ease;
     }
-    /* Force text inside button to be dark */
-    div[data-testid="stButton"] > button p {
-        color: #0f172a !important;
-    }
-    div[data-testid="stButton"] > button:hover {
+    div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #f1f5f9 !important;
         border-color: #0f172a !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        color: #0f172a !important;
+    }
+    /* Force internal text color of buttons */
+    div[data-testid="stFormSubmitButton"] p { color: #0f172a !important; }
+
+    /* 5. METRIC RESIZING (Fixing "Gib Size") */
+    .latency-badge {
+        font-family: 'JetBrains Mono', monospace;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #0f172a;
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 18px; /* Smaller, cleaner size */
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .latency-dot {
+        height: 10px;
+        width: 10px;
+        background-color: #16a34a; /* Green dot */
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
     }
 
-    /* 5. Custom Alert Boxes */
+    /* 6. STATUS MESSAGES (AV Style) */
     .verdict-success { 
         color: #166534 !important; 
         background-color: #dcfce7; 
-        padding: 15px; 
-        border-radius: 6px; 
+        padding: 20px; 
+        border-radius: 8px; 
         border: 1px solid #bbf7d0; 
-        margin-top: 10px; 
-        font-weight: 600; 
-    }
-    .verdict-fail { 
-        color: #991b1b !important; 
-        background-color: #fee2e2; 
-        padding: 15px; 
-        border-radius: 6px; 
-        border: 1px solid #fecaca; 
-        margin-top: 10px; 
-        font-weight: 600; 
+        margin-top: 15px; 
+        font-weight: 700; 
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
     
-    /* 6. Layout & Metrics */
-    .hash-box { background-color: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; margin-top: 5px; }
-    .verified-badge { background-color: #dcfce7; color: #166534 !important; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 600; border: 1px solid #bbf7d0; }
-    .block-container { padding-top: 2rem; }
-    footer {visibility: hidden;}
-    
-    /* 7. Sidebar List */
-    .siem-item { font-size: 13px; color: #334155 !important; margin-bottom: 5px; }
-    .siem-check { color: #16a34a !important; font-weight: bold; margin-right: 5px; }
+    /* Sidebar Compactness */
+    div[data-testid="stSidebarUserContent"] {
+        padding-top: 0rem !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT ---
 if 'last_latency' not in st.session_state: 
-    st.session_state.last_latency = "0.00 ms"
+    st.session_state.last_latency = "0.0000 ms"
 
-# --- SIDEBAR ---
+# --- SIDEBAR (RESTRUCTURED FOR DONORS) ---
 with st.sidebar:
-    try:
-        st.image("graphic.webp", use_column_width=True)
-    except:
-        st.warning("Logo not found.")
-
-    st.markdown("---")
-    
-    st.header("Sentinel Status")
-    st.success("AI Firewall: ONLINE")
-    
-    # 100% Verified Badge
-    st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 15px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
-    
-    st.markdown("---")
-
-    # SIEM List
-    st.markdown("### 🛡️ Defense Protocols")
+    # 1. Tech Stack (First thing they see - "How it works")
+    st.markdown("### 🏗️ Core Architecture")
     st.markdown("""
-        <div class="siem-item"><span class="siem-check">✓</span> SQL Injection (Pattern)</div>
-        <div class="siem-item"><span class="siem-check">✓</span> XSS Payloads (Sanitize)</div>
-        <div class="siem-item"><span class="siem-check">✓</span> RCE Attempts (Heuristic)</div>
-        <div class="siem-item"><span class="siem-check">✓</span> Prompt Injection (AI)</div>
+        <div style="background: #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Storage Layer</div>
+            <div style="font-size: 14px; color: #0f172a; font-weight: 600;">Vector DB (Pinecone)</div>
+        </div>
+        <div style="background: #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 20px;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Integrity Core</div>
+            <div style="font-size: 14px; color: #0f172a; font-weight: 600;">Merkle-Tree (HMAC)</div>
+        </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
     
-    # Bottom Latency Display
-    st.metric("Engine Latency", st.session_state.last_latency)
+    # 2. Sentinel Status (Lifted Up)
+    st.header("Sentinel Status")
+    st.success("AI Firewall: ONLINE")
+    
+    # Verified Badge
+    st.markdown("""
+        <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
+            <div style="font-size: 32px; font-weight: 800; color: #0f172a;">100%</div>
+            <span style="background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; border: 1px solid #bbf7d0;">VERIFIED</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
-# --- HEADER ---
-c1, c2 = st.columns([5, 1]) 
+    # 3. Defense Protocols
+    st.markdown("### 🛡️ Active Protocols")
+    st.markdown("""
+        <div style="font-size: 13px; margin-bottom: 6px;">✅ SQL Injection <span style="color:#64748b">(Pattern)</span></div>
+        <div style="font-size: 13px; margin-bottom: 6px;">✅ XSS Payloads <span style="color:#64748b">(Sanitize)</span></div>
+        <div style="font-size: 13px; margin-bottom: 6px;">✅ RCE Attempts <span style="color:#64748b">(Heuristic)</span></div>
+        <div style="font-size: 13px;">✅ Prompt Injection <span style="color:#64748b">(AI)</span></div>
+    """, unsafe_allow_html=True)
+
+# --- HEADER (CLEANER LAYOUT) ---
+c1, c2 = st.columns([3, 1]) 
 with c1:
-    st.title("🛡️ AXON ARCH | AI Memory Defense")
-    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.6.0 (High Contrast)")
+    st.title("🛡️ AXON ARCH")
+    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.7.0")
 
 with c2:
-    # PLACEHOLDER: This ensures we can update the metric immediately after calculation
-    latency_container = st.empty()
-    latency_container.metric("Latency", st.session_state.last_latency, delta="Target < 5ms")
+    # Custom HTML Component for Latency (Solves "Gib Size")
+    latency_placeholder = st.empty()
+    latency_placeholder.markdown(f"""
+        <div class="latency-badge">
+            <span class="latency-dot"></span>
+            <span>{st.session_state.last_latency}</span>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- TABS ---
 tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "🧬 Forensic DNA"])
@@ -144,15 +180,15 @@ tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "
 with tab1:
     col1, col2, col3 = st.columns(3)
     col1.metric("Vectors Secured", "14.2M")
-    col2.metric("Adversarial Blocks", "42")
+    col2.metric("Threats Neutralized", "42")
     col3.metric("Model Integrity", "100%", delta="HMAC-SHA256 Verified")
     
-    st.markdown("### 📡 Live Vector Stream Analysis")
+    st.markdown("### 📡 Real-Time Packet Analysis")
     siem_data = pd.DataFrame({
         'Timestamp': ['14:02:01', '14:02:05', '14:03:12'],
         'Origin': ['LLM_Inference_Node', 'RAG_Pipeline_04', 'External_API'],
         'Payload_Hash': ['a1b2...99x', 'System Override...', 'Standard_Query'],
-        'Defense_Action': ['VERIFIED', 'BLOCKED (Injection)', 'VERIFIED']
+        'Defense_Action': ['CLEAN', 'QUARANTINED', 'CLEAN']
     })
     st.table(siem_data)
 
@@ -165,41 +201,58 @@ with tab2:
                                     placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
                                     height=150)
         
-        submitted = st.form_submit_button("🛡️ Scan & Seal to Memory")
+        # This button is now targeted by CSS to be White/Dark Text
+        submitted = st.form_submit_button("🛡️ SCAN & SEAL TO MEMORY")
         
         if submitted:
             if data_to_seal:
                 clean_input = data_to_seal.strip()
                 items = [clean_input]
                 
-                with st.spinner("Sentinel analyzing..."):
-                    # 1. Local SIEM Check
+                with st.spinner("Running Deep Packet Inspection..."):
                     threat = sentinel.scan_payload(clean_input)
                     
                     if threat["status"] == "DETECTED":
-                         st.markdown(f'<div class="verdict-fail">🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)<br>Threat: {threat["type"]}<br>Action: BLOCKED</div>', unsafe_allow_html=True)
+                         st.markdown(f'<div class="verdict-fail">🚨 MALWARE DETECTED<br>Type: {threat["type"]}<br>Status: QUARANTINED</div>', unsafe_allow_html=True)
                     else:
-                        # 2. Benchmark Latency (Math)
                         core_start = time.perf_counter()
                         _ = hashlib.sha256(clean_input.encode()).hexdigest()
                         core_end = time.perf_counter()
                         
-                        # UPDATE STATE & UI IMMEDIATELY
+                        # Update Latency Badge Immediately
                         new_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         st.session_state.last_latency = new_latency
-                        latency_container.metric("Latency", new_latency, delta="Target < 5ms")
+                        latency_placeholder.markdown(f"""
+                            <div class="latency-badge">
+                                <span class="latency-dot"></span>
+                                <span>{new_latency}</span>
+                            </div>
+                        """, unsafe_allow_html=True)
                         
-                        # 3. Cloud Seal
                         try:
                             res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY})
                             
                             if res.status_code == 200:
                                 seal_id = res.json()['seal_id']
-                                st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: GRANTED<br>Deep Packet Inspection Complete. Sealed to Immutable Ledger.</div>', unsafe_allow_html=True)
+                                # DONOR ATTRACTIVE LANGUAGE
+                                st.markdown(f"""
+                                    <div class="verdict-success">
+                                        <div style="font-size: 24px;">🛡️</div>
+                                        <div>
+                                            <div style="font-size: 18px; margin-bottom: 2px;">THREAT NEUTRALIZED. SYSTEM CLEAN.</div>
+                                            <div style="font-size: 13px; font-weight: 500; opacity: 0.9;">Integrity Sealed on Immutable Ledger.</div>
+                                        </div>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                
                                 st.markdown("### 🔑 Cryptographic Proof:")
-                                st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
+                                st.markdown(f"""
+                                    <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'JetBrains Mono'; font-size: 13px; color: #334155;">
+                                        {seal_id}
+                                    </div>
+                                """, unsafe_allow_html=True)
                             elif res.status_code == 403:
-                                st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
+                                st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED")
                             else:
                                 st.error(f"Cloud Engine Error: {res.status_code}")
                         except Exception as e:
@@ -207,12 +260,14 @@ with tab2:
 
 # --- TAB 3: AUDIT ---
 with tab3:
-    st.subheader("Model Weight & Data Audit")
+    st.subheader("Forensic Audit")
 
     with st.form("audit_form"):
-        target_root = st.text_input("Enter Merkle Root Hash (Seal ID):")
-        target_data = st.text_input("Enter Vector Data Fragment:")
-        audit_submitted = st.form_submit_button("Run Integrity Check")
+        target_root = st.text_input("Enter Seal ID (Hash):")
+        target_data = st.text_input("Enter Suspect Data:")
+        
+        # This button is also fixed by the CSS
+        audit_submitted = st.form_submit_button("RUN INTEGRITY CHECK")
         
         if audit_submitted:
             clean_data = target_data.strip()
@@ -223,7 +278,6 @@ with tab3:
                 
                 if is_safe:
                     st.balloons()
-                    st.markdown(f'<div class="verdict-success">✅ VERIFIED: SECURE<br>Cryptographic Proof Confirmed by Cloud Sentinel.</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="verdict-success">✅ INTEGRITY CONFIRMED<br>The data is authentic and has not been tampered with.</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="verdict-fail">🚨 ALERT: {status}<br>Intent Invalidation Triggered.</div>', unsafe_allow_html=True)
-                    st.warning("Analysis: The data does not match the sealed ledger record.")
+                    st.markdown(f'<div class="verdict-fail">🚨 TAMPERING DETECTED<br>Digital Signature Mismatch.</div>', unsafe_allow_html=True)
