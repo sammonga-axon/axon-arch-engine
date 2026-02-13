@@ -1,20 +1,29 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Annotated
 import os
 import uvicorn
 
 # IMPORT YOUR MODULES
 from database import AxonDB
-from merkle_engine import MerkleEngine  # Uses your HMAC Class
+from merkle_engine import MerkleEngine
 from siem_engine import SovereignSentinel
 
 # --- INIT ---
-app = FastAPI(title="AXON ARCH ENGINE", version="2.0.0")
 db = AxonDB()
-# We do not instantiate MerkleEngine globaly anymore because 
-# your class takes data in __init__
 sentinel = SovereignSentinel()
+
+# --- ENTERPRISE LIFESPAN (Replaces Deprecated @app.on_event) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("AXON ARCH | SYSTEM BOOT: Initializing Ledger...")
+    db.init_db()
+    yield
+    print("AXON ARCH | SYSTEM HALT: Closing Ledger Connections...")
+    db.close()
+
+app = FastAPI(title="AXON ARCH ENGINE", version="2.0.0", lifespan=lifespan)
 
 # --- MODELS ---
 class SealRequest(BaseModel):
@@ -24,19 +33,13 @@ class ValidateRequest(BaseModel):
     merkle_root: str
     data_fragment: str
 
-# --- STARTUP EVENT ---
-@app.on_event("startup")
-async def startup_event():
-    print("AXON ARCH | SYSTEM BOOT: Initializing Ledger...")
-    db.init_db()
-
 # --- ENDPOINTS ---
 @app.get("/")
 def health_check():
     return {"status": "AXON_ARCH_ONLINE", "security": "HMAC_SHA256"}
 
 @app.post("/v1/seal")
-def seal_data(payload: SealRequest, x_api_key: Optional[str] = Header(None)):
+def seal_data(payload: SealRequest, x_api_key: Annotated[Optional[str], Header()] = None):
     """
     1. Scan (SIEM)
     2. Hash (HMAC Merkle)
@@ -50,10 +53,11 @@ def seal_data(payload: SealRequest, x_api_key: Optional[str] = Header(None)):
     for item in payload.data_items:
         scan = sentinel.scan_payload(item)
         if scan["status"] == "DETECTED":
+            # Intent invalidation triggers immediate signal
+            print(f"AXON ARCH | INTENT INVALIDATED: {scan['type']}")
             raise HTTPException(status_code=403, detail=f"THREAT_DETECTED: {scan['type']}")
 
-    # 3. Merkle Hashing (USING YOUR CLASS)
-    # We initialize the engine with data, it automatically looks for the ENV Key
+    # 3. Merkle Hashing
     try:
         engine = MerkleEngine(data_blocks=payload.data_items)
         root_hash = engine.root
@@ -74,15 +78,15 @@ def seal_data(payload: SealRequest, x_api_key: Optional[str] = Header(None)):
         raise HTTPException(status_code=500, detail="LEDGER_WRITE_FAILED")
 
 @app.post("/v1/validate")
-def validate_integrity(payload: ValidateRequest, x_api_key: Optional[str] = Header(None)):
+def validate_integrity(payload: ValidateRequest, x_api_key: Annotated[Optional[str], Header()] = None):
     """
     THE AUDIT LOGIC:
-    1. Check DB for Provenance (Did we seal this?)
-    2. Check HMAC for Integrity (Does the math match?)
+    1. Check DB for Provenance
+    2. Check HMAC for Integrity
     """
     print(f"AUDIT REQUEST: Checking Root {payload.merkle_root}")
 
-    # STEP 1: PROVENANCE CHECK (Database)
+    # STEP 1: PROVENANCE CHECK
     record = db.verify_integrity(payload.merkle_root)
     
     if not record:
@@ -92,14 +96,10 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Optional[str] = Head
             "detail": "Root Hash not found in Immutable Ledger."
         }
 
-    # STEP 2: MATHEMATICAL CHECK (HMAC)
-    # We use your static verify_proof method.
-    # For a simple 'Data vs Root' check (Single Item), the proof list is empty [].
-    # Your class will automatically pull the AXON_SOVEREIGN_KEY from Env to verify.
-    
+    # STEP 2: MATHEMATICAL CHECK
     is_valid_math = MerkleEngine.verify_proof(
         data=payload.data_fragment,
-        proof=[], # Empty proof for single-item verification
+        proof=[], 
         target_root=payload.merkle_root
     )
 
@@ -110,6 +110,8 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Optional[str] = Head
             "timestamp": str(record['timestamp'])
         }
     else:
+        # Merkle proof failure triggers immediate signal
+        print("AXON ARCH | INTENT INVALIDATED: Merkle Proof Failed")
         return {
             "verified": False,
             "status": "INTEGRITY_FAILURE",
@@ -117,4 +119,6 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Optional[str] = Head
         }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    # DYNAMIC PORT BINDING FOR CLOUD DEPLOYMENT
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

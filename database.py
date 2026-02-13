@@ -16,7 +16,7 @@ class AxonDB:
         if DB_URL:
             try:
                 # Use connect_timeout to prevent the app from hanging on cold starts
-                self.conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor, connect_timeout=5)
+                self.conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor, connect_timeout=10)
                 print("AXON ARCH | CONNECTED: Sovereign Cloud Vault (Supabase)")
             except Exception as e:
                 print(f"--- CLOUD CONNECTION FAILED: {e} ---")
