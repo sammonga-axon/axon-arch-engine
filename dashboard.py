@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
-from PIL import Image
 from axon_sdk import AxonGuard
 from merkle_engine import MerkleEngine 
 from siem_engine import SovereignSentinel 
@@ -44,27 +43,13 @@ st.markdown("""
         height: 45px !important;
         transition: all 0.2s ease;
     }
-    div[data-testid="stButton"] > button:hover {
-        background-color: #f1f5f9 !important;
-        color: #0f172a !important;
-        border-color: #0f172a !important;
-    }
     
     footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- STATE MANAGEMENT (RESTORED) ---
-# This ensures inputs don't vanish or lock up
-if 'seal_input' not in st.session_state: st.session_state.seal_input = ""
-if 'audit_root' not in st.session_state: st.session_state.audit_root = ""
-if 'audit_data' not in st.session_state: st.session_state.audit_data = ""
+# --- STATE MANAGEMENT ---
 if 'last_latency' not in st.session_state: st.session_state.last_latency = "0.00 ms"
-
-def clear_seal_console(): st.session_state.seal_input = ""
-def clear_audit_console():
-    st.session_state.audit_root = ""
-    st.session_state.audit_data = ""
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -77,7 +62,6 @@ with st.sidebar:
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
-    # 100% Badge High Visibility
     st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 15px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
     
     st.markdown("---")
@@ -122,85 +106,69 @@ with tab1:
     })
     st.table(siem_data)
 
-# --- TAB 2: SECURE AI CONTEXT (FIXED) ---
+# --- TAB 2: SECURE AI CONTEXT (FORM UPDATED) ---
 with tab2:
-    c_input, c_btn = st.columns([5, 1])
-    with c_input:
-        st.subheader("Inject Data into AI Memory Stream")
-    with c_btn:
-        st.write("") 
-        st.button("🔄 New Session", on_click=clear_seal_console)
-
-    # DIRECT BINDING TO SESSION STATE TO FIX CURSOR ISSUE
-    data_to_seal = st.text_area("Input Vector / Context Chunk:", 
-                                value=st.session_state.seal_input,
-                                placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
-                                height=150)
+    st.subheader("Inject Data into AI Memory Stream")
     
-    # Update state on change manually if needed, but 'value' binding usually sufficient
-    st.session_state.seal_input = data_to_seal
-
-    if st.button("🛡️ Scan & Seal to Memory"):
-        if data_to_seal:
-            items = [i.strip() for i in data_to_seal.split('\n') if i.strip()]
-            
-            with st.spinner("Sentinel analyzing..."):
-                time.sleep(0.4) 
-                threats_found = [sentinel.scan_payload(item) for item in items if sentinel.scan_payload(item)["status"] == "DETECTED"]
-                clean_items = [item for item in items if sentinel.scan_payload(item)["status"] != "DETECTED"]
+    # --- FORM START ---
+    with st.form("seal_form"):
+        data_to_seal = st.text_area("Input Vector / Context Chunk:", 
+                                    placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
+                                    height=150)
+        
+        # This button triggers the logic. Nothing runs until clicked.
+        submitted = st.form_submit_button("🛡️ Scan & Seal to Memory")
+        
+        if submitted:
+            if data_to_seal:
+                items = [i.strip() for i in data_to_seal.split('\n') if i.strip()]
                 
-                # 1. LOCAL BLOCK
-                if threats_found:
-                    st.error(f"🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)")
-                    for threat in threats_found:
-                        st.markdown(f'<div class="verdict-fail">⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br>Threat Pattern: {threat["type"]}</div>', unsafe_allow_html=True)
-                
-                # 2. SERVER REQUEST
-                if clean_items:
-                    core_start = time.perf_counter()
-                    for item in clean_items: local_merkle.hash_data(item)
-                    core_end = time.perf_counter()
-                    st.session_state.last_latency = f"{(core_end - core_start) * 1000:.4f} ms"
+                with st.spinner("Sentinel analyzing..."):
+                    time.sleep(0.4) 
+                    threats_found = [sentinel.scan_payload(item) for item in items if sentinel.scan_payload(item)["status"] == "DETECTED"]
+                    clean_items = [item for item in items if sentinel.scan_payload(item)["status"] != "DETECTED"]
                     
-                    try:
-                        res = requests.post(f"{API_URL}/v1/seal", json={"data_items": clean_items}, headers={"x-api-key": API_KEY})
+                    if threats_found:
+                        st.error(f"🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)")
+                        for threat in threats_found:
+                            st.markdown(f'<div class="verdict-fail">⛔ SIEM CLEARANCE: <span style="color: #dc2626; font-weight: 800;">DENIED</span> <br>Threat Pattern: {threat["type"]}</div>', unsafe_allow_html=True)
+                    
+                    if clean_items:
+                        core_start = time.perf_counter()
+                        for item in clean_items: local_merkle.hash_data(item)
+                        core_end = time.perf_counter()
+                        st.session_state.last_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         
-                        if res.status_code == 200:
-                            seal_id = res.json()['seal_id']
-                            st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br>Deep Packet Inspection Complete.</div>', unsafe_allow_html=True)
-                            st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
-                        elif res.status_code == 403:
-                            st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
-                        else:
-                            st.error(f"Cloud Engine Error: {res.status_code}")
-                    except Exception as e:
-                        st.error(f"Network Timeout: {str(e)}")
+                        try:
+                            res = requests.post(f"{API_URL}/v1/seal", json={"data_items": clean_items}, headers={"x-api-key": API_KEY})
+                            
+                            if res.status_code == 200:
+                                seal_id = res.json()['seal_id']
+                                st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: <span style="color: #16a34a; font-weight: 800;">GRANTED</span> <br>Deep Packet Inspection Complete.</div>', unsafe_allow_html=True)
+                                st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
+                            elif res.status_code == 403:
+                                st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
+                            else:
+                                st.error(f"Cloud Engine Error: {res.status_code}")
+                        except Exception as e:
+                            st.error(f"Network Timeout: {str(e)}")
 
-# --- TAB 3: AUDIT (FIXED) ---
+# --- TAB 3: AUDIT (FORM UPDATED) ---
 with tab3:
-    c_aud_head, c_aud_btn = st.columns([5, 1])
-    with c_aud_head:
-        st.subheader("Model Weight & Data Audit")
-    with c_aud_btn:
-        st.write("")
-        st.button("🔄 Reset Console", on_click=clear_audit_console)
+    st.subheader("Model Weight & Data Audit")
 
-    # RESTORED INPUT VISIBILITY
-    target_root = st.text_input("Enter Merkle Root Hash:", 
-                                value=st.session_state.audit_root,
-                                key="audit_root_input")
-    st.session_state.audit_root = target_root # Sync
-
-    target_data = st.text_input("Enter Vector Data Fragment:", 
-                                value=st.session_state.audit_data,
-                                key="audit_data_input")
-    st.session_state.audit_data = target_data # Sync
-    
-    if st.button("Run Integrity Check"):
-        with st.spinner("Verifying..."):
-            is_safe, status = guard.protect(target_data, target_root)
-            if is_safe:
-                st.balloons()
-                st.markdown(f'<div class="verdict-success">✅ VERIFIED: <span style="color: #16a34a; font-weight: 800;">SECURE</span> <br>Mathematical Proof Confirmed. Data is Untainted.</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="verdict-fail">🚨 ALERT: <span style="color: #dc2626; font-weight: 800;">{status}</span> <br>Intent Invalidation Triggered.</div>', unsafe_allow_html=True)
+    # --- FORM START ---
+    with st.form("audit_form"):
+        target_root = st.text_input("Enter Merkle Root Hash:")
+        target_data = st.text_input("Enter Vector Data Fragment:")
+        
+        audit_submitted = st.form_submit_button("Run Integrity Check")
+        
+        if audit_submitted:
+            with st.spinner("Verifying..."):
+                is_safe, status = guard.protect(target_data, target_root)
+                if is_safe:
+                    st.balloons()
+                    st.markdown(f'<div class="verdict-success">✅ VERIFIED: <span style="color: #16a34a; font-weight: 800;">SECURE</span> <br>Mathematical Proof Confirmed. Data is Untainted.</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="verdict-fail">🚨 ALERT: <span style="color: #dc2626; font-weight: 800;">{status}</span> <br>Intent Invalidation Triggered.</div>', unsafe_allow_html=True)
