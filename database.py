@@ -153,6 +153,5 @@ class AxonDB:
             self.conn.close()
 
 if __name__ == "__main__":
-    db = AxonDB()
-    db.init_db()
-    db.close()
+    print("AXON ARCH | PRE-FLIGHT CHECK: Bypassed. Handing execution to Uvicorn.")
+    pass
