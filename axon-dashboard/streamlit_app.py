@@ -160,8 +160,8 @@ with st.sidebar:
 # --- HEADER (CLEANER LAYOUT) ---
 c1, c2 = st.columns([3, 1]) 
 with c1:
-    st.title("🛡️ AXON ARCH")
-    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.7.0")
+    st.title("🛡️ AXON ARCH | AI Memory Defense")
+    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.7.0 (Enterprise)")
 
 with c2:
     # Custom HTML Component for Latency (Solves "Gib Size")
