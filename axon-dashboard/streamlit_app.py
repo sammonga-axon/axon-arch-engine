@@ -18,10 +18,10 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: VISUAL SURGERY ---
+# --- CSS: VISUAL SURGERY (FIXED INPUTS) ---
 st.markdown("""
     <style>
-    /* 1. LAYOUT SPACING (Push content down slightly as requested) */
+    /* 1. LAYOUT SPACING */
     .block-container { 
         padding-top: 3rem !important; 
         padding-bottom: 1rem !important;
@@ -32,37 +32,38 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     h1, h2, h3, h4, h5, h6, p, li, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
     
-    /* 3. INPUT FIELDS (White Background / Black Text) */
-    .stTextArea textarea, .stTextInput input {
-        color: #000000 !important;
+    /* 3. INPUT FIELDS (THE FIX: Target the Container, not just the text) */
+    div[data-baseweb="base-input"], .stTextArea textarea, .stTextInput input {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
-        font-family: 'JetBrains Mono', monospace !important;
+        color: #0f172a !important;
+        border-radius: 4px !important;
+    }
+    /* Force typed text to be black */
+    input, textarea {
+        color: #000000 !important;
+        caret-color: #000000 !important;
     }
 
-    /* 4. BUTTON SURGERY (Fixing the Black Void) */
-    /* Target specifically the Form Submit Buttons */
+    /* 4. BUTTON SURGERY */
     button[kind="primary"], div[data-testid="stFormSubmitButton"] > button {
         background-color: #ffffff !important;
         color: #0f172a !important;
-        border: 2px solid #cbd5e1 !important; /* Thicker border for visibility */
+        border: 2px solid #cbd5e1 !important; 
         border-radius: 6px;
         font-weight: 700 !important;
         height: 48px !important;
         width: 100% !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: all 0.2s ease;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #f1f5f9 !important;
         border-color: #0f172a !important;
-        transform: translateY(-1px);
         color: #0f172a !important;
     }
-    /* Force internal text color of buttons */
     div[data-testid="stFormSubmitButton"] p { color: #0f172a !important; }
 
-    /* 5. METRIC RESIZING (Fixing "Gib Size") */
+    /* 5. METRIC RESIZING */
     .latency-badge {
         font-family: 'JetBrains Mono', monospace;
         background-color: #ffffff;
@@ -71,7 +72,7 @@ st.markdown("""
         padding: 10px 15px;
         border-radius: 8px;
         font-weight: 600;
-        font-size: 18px; /* Smaller, cleaner size */
+        font-size: 18px; 
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -80,7 +81,7 @@ st.markdown("""
     .latency-dot {
         height: 10px;
         width: 10px;
-        background-color: #16a34a; /* Green dot */
+        background-color: #16a34a; 
         border-radius: 50%;
         display: inline-block;
         animation: pulse 2s infinite;
@@ -91,7 +92,7 @@ st.markdown("""
         100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
     }
 
-    /* 6. STATUS MESSAGES (AV Style) */
+    /* 6. STATUS MESSAGES */
     .verdict-success { 
         color: #166534 !important; 
         background-color: #dcfce7; 
@@ -105,8 +106,16 @@ st.markdown("""
         align-items: center;
         gap: 12px;
     }
+    .verdict-fail { 
+        color: #991b1b !important; 
+        background-color: #fee2e2; 
+        padding: 15px; 
+        border-radius: 6px; 
+        border: 1px solid #fecaca; 
+        margin-top: 10px; 
+        font-weight: 600; 
+    }
     
-    /* Sidebar Compactness */
     div[data-testid="stSidebarUserContent"] {
         padding-top: 0rem !important;
     }
@@ -117,9 +126,8 @@ st.markdown("""
 if 'last_latency' not in st.session_state: 
     st.session_state.last_latency = "0.0000 ms"
 
-# --- SIDEBAR (RESTRUCTURED FOR DONORS) ---
+# --- SIDEBAR ---
 with st.sidebar:
-    # 1. Tech Stack (First thing they see - "How it works")
     st.markdown("### 🏗️ Core Architecture")
     st.markdown("""
         <div style="background: #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 8px;">
@@ -134,11 +142,9 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 2. Sentinel Status (Lifted Up)
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
-    # Verified Badge
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
             <div style="font-size: 32px; font-weight: 800; color: #0f172a;">100%</div>
@@ -148,7 +154,6 @@ with st.sidebar:
     
     st.markdown("---")
 
-    # 3. Defense Protocols
     st.markdown("### 🛡️ Active Protocols")
     st.markdown("""
         <div style="font-size: 13px; margin-bottom: 6px;">✅ SQL Injection <span style="color:#64748b">(Pattern)</span></div>
@@ -157,14 +162,13 @@ with st.sidebar:
         <div style="font-size: 13px;">✅ Prompt Injection <span style="color:#64748b">(AI)</span></div>
     """, unsafe_allow_html=True)
 
-# --- HEADER (CLEANER LAYOUT) ---
+# --- HEADER ---
 c1, c2 = st.columns([3, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
-    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.7.0 (Enterprise)")
+    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.8.0 (Enterprise)")
 
 with c2:
-    # Custom HTML Component for Latency (Solves "Gib Size")
     latency_placeholder = st.empty()
     latency_placeholder.markdown(f"""
         <div class="latency-badge">
@@ -201,7 +205,6 @@ with tab2:
                                     placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
                                     height=150)
         
-        # This button is now targeted by CSS to be White/Dark Text
         submitted = st.form_submit_button("🛡️ SCAN & SEAL TO MEMORY")
         
         if submitted:
@@ -219,7 +222,6 @@ with tab2:
                         _ = hashlib.sha256(clean_input.encode()).hexdigest()
                         core_end = time.perf_counter()
                         
-                        # Update Latency Badge Immediately
                         new_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         st.session_state.last_latency = new_latency
                         latency_placeholder.markdown(f"""
@@ -230,11 +232,11 @@ with tab2:
                         """, unsafe_allow_html=True)
                         
                         try:
-                            res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY})
+                            # Added Timeout to prevent infinite hanging
+                            res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY}, timeout=15)
                             
                             if res.status_code == 200:
                                 seal_id = res.json()['seal_id']
-                                # DONOR ATTRACTIVE LANGUAGE
                                 st.markdown(f"""
                                     <div class="verdict-success">
                                         <div style="font-size: 24px;">🛡️</div>
@@ -244,7 +246,6 @@ with tab2:
                                         </div>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                
                                 st.markdown("### 🔑 Cryptographic Proof:")
                                 st.markdown(f"""
                                     <div style="background: #f1f5f9; padding: 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'JetBrains Mono'; font-size: 13px; color: #334155;">
@@ -252,11 +253,12 @@ with tab2:
                                     </div>
                                 """, unsafe_allow_html=True)
                             elif res.status_code == 403:
-                                st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED")
+                                st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED (API Key Invalid)")
                             else:
-                                st.error(f"Cloud Engine Error: {res.status_code}")
+                                # SHOW THE ERROR for debugging
+                                st.error(f"Cloud Engine Error: {res.status_code} - {res.text}")
                         except Exception as e:
-                            st.error(f"Network Timeout: {str(e)}")
+                            st.error(f"Connection Failed: {str(e)}")
 
 # --- TAB 3: AUDIT ---
 with tab3:
@@ -266,7 +268,6 @@ with tab3:
         target_root = st.text_input("Enter Seal ID (Hash):")
         target_data = st.text_input("Enter Suspect Data:")
         
-        # This button is also fixed by the CSS
         audit_submitted = st.form_submit_button("RUN INTEGRITY CHECK")
         
         if audit_submitted:
