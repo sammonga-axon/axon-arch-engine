@@ -2,8 +2,6 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
-import hashlib
-from PIL import Image
 from axon_sdk import AxonGuard
 from merkle_engine import MerkleEngine 
 from siem_engine import SovereignSentinel 
@@ -28,7 +26,7 @@ st.markdown("""
     textarea, input { color: #0f172a !important; background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
     header[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0; }
 
-    /* 2. Custom Alert Boxes (Restored) */
+    /* 2. Custom Alert Boxes */
     .verdict-success { 
         color: #166534 !important; 
         background-color: #dcfce7; 
@@ -77,23 +75,16 @@ with st.sidebar:
         st.warning("Logo not found.")
 
     st.markdown("---")
-    
-    # Sentinel Status
     st.header("Sentinel Status")
     st.success("AI Firewall: ONLINE")
     
-    # 100% Verified Badge (High Visibility)
     st.markdown("""<div style="font-size: 14px; color: #64748b !important; margin-top: 15px; margin-bottom: 5px;">Integrity Level</div><div style="font-size: 48px; font-weight: 700; color: #0f172a !important; line-height: 1;">100%</div><div style="margin-top: 10px;"><span class="verified-badge">↑ Verified</span></div>""", unsafe_allow_html=True)
     
     st.markdown("---")
-    
-    # Latency Tracker
     st.caption("Engine Latency (Live):")
     st.markdown(f'<div class="latency-box">{st.session_state.last_latency}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    
-    # Technical Details (Restored)
     st.markdown("""
         <div style="font-size: 13px; color: #475569; margin-bottom: 4px;"><strong>Storage Layer</strong></div>
         <div style="background: #e2e8f0; padding: 6px; border-radius: 4px; font-size: 12px; color: #0f172a; margin-bottom: 12px;">Vector DB: Pinecone/Weaviate</div>
@@ -105,7 +96,7 @@ with st.sidebar:
 c1, c2 = st.columns([5, 1]) 
 with c1:
     st.title("🛡️ AXON ARCH | AI Memory Defense")
-    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.3.0 (Enterprise)")
+    st.caption("Immutable Ledger for Vector Embeddings & Model Weights | v3.4.0 (Enterprise)")
 
 with c2:
     st.metric("Inference Latency", st.session_state.last_latency, delta="Target < 5ms")
@@ -129,80 +120,65 @@ with tab1:
     })
     st.table(siem_data)
 
-# --- TAB 2: SECURE AI CONTEXT (FORM WRAPPER) ---
+# --- TAB 2: SECURE AI CONTEXT (FORM) ---
 with tab2:
     st.subheader("Inject Data into AI Memory Stream")
     
-    # FORM: Solving the "Invisible Cursor" and "Black Button"
     with st.form("seal_form"):
-        # Native Input
-        data_to_seal = st.text_area("Input Vector / Context Chunk:", 
-                                    placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
-                                    height=150)
-        
-        # Native Button
+        data_to_seal = st.text_area("Input Vector / Context Chunk:", placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", height=150)
         submitted = st.form_submit_button("🛡️ Scan & Seal to Memory")
         
         if submitted:
             if data_to_seal:
-                # CRITICAL: Strip whitespace to match Audit logic
                 clean_input = data_to_seal.strip()
                 items = [clean_input]
                 
                 with st.spinner("Sentinel analyzing..."):
-                    # 1. Local Scan (Regex)
                     threat = sentinel.scan_payload(clean_input)
-                    
                     if threat["status"] == "DETECTED":
-                         st.markdown(f'<div class="verdict-fail">🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)<br>Threat: {threat["type"]}<br>Action: BLOCKED</div>', unsafe_allow_html=True)
+                         st.markdown(f'<div class="verdict-fail">🚨 ADVERSARIAL ATTACK DETECTED (LOCAL)<br>Threat: {threat["type"]}</div>', unsafe_allow_html=True)
                     else:
-                        # 2. Server Request (Cloud)
                         core_start = time.perf_counter()
-                        # Local Hash for Latency Sim
-                        _ = hashlib.sha256(clean_input.encode()).hexdigest()
+                        # Local Latency Check (Not for Security, just for metric)
+                        _ = local_merkle.hash_data(clean_input)
                         core_end = time.perf_counter()
                         st.session_state.last_latency = f"{(core_end - core_start) * 1000:.4f} ms"
                         
                         try:
-                            # 3. API Call to Supabase/Render
                             res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY})
-                            
                             if res.status_code == 200:
                                 seal_id = res.json()['seal_id']
-                                st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: GRANTED<br>Deep Packet Inspection Complete. Sealed to Immutable Ledger.</div>', unsafe_allow_html=True)
+                                st.markdown(f'<div class="verdict-success">🛡️ SIEM CLEARANCE: GRANTED<br>Sealed to Immutable Ledger.</div>', unsafe_allow_html=True)
                                 st.markdown("### 🔑 Cryptographic Proof:")
                                 st.markdown(f'<div class="hash-box">{seal_id}</div>', unsafe_allow_html=True)
                             elif res.status_code == 403:
-                                st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED (Server Side)")
+                                st.error("🚨 CLOUD SENTINEL: THREAT BLOCKED")
                             else:
                                 st.error(f"Cloud Engine Error: {res.status_code}")
                         except Exception as e:
                             st.error(f"Network Timeout: {str(e)}")
 
-# --- TAB 3: AUDIT (FORM WRAPPER) ---
+# --- TAB 3: AUDIT (SDK VERIFICATION) ---
 with tab3:
     st.subheader("Model Weight & Data Audit")
 
-    # FORM: Solves State Drift
     with st.form("audit_form"):
         target_root = st.text_input("Enter Merkle Root Hash (Seal ID):")
         target_data = st.text_input("Enter Vector Data Fragment:")
-        
         audit_submitted = st.form_submit_button("Run Integrity Check")
         
         if audit_submitted:
-            # CRITICAL: Strip whitespace
+            # Strip whitespace to match Seal Logic
             clean_data = target_data.strip()
             clean_root = target_root.strip()
             
-            # Local Verification Logic
-            calculated_hash = hashlib.sha256(clean_data.encode()).hexdigest()
-            
-            if calculated_hash == clean_root:
-                st.balloons()
-                st.markdown(f'<div class="verdict-success">✅ VERIFIED: SECURE<br>Mathematical Proof Confirmed. Data is Untainted.</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="verdict-fail">🚨 ALERT: INTENT INVALIDATION<br>Hash Mismatch Detected.</div>', unsafe_allow_html=True)
-                st.write("### Forensic Report:")
-                st.code(f"Input Data:      {clean_data}\nCalculated Hash: {calculated_hash}\nExpected Hash:   {clean_root}", language="text")
-                st.warning("Analysis: The input data does not match the sealed ledger record.")
+            with st.spinner("Querying Sovereign Ledger..."):
+                # USE SDK (Guard) TO VERIFY WITH SERVER KEY
+                is_safe, status = guard.protect(clean_data, clean_root)
+                
+                if is_safe:
+                    st.balloons()
+                    st.markdown(f'<div class="verdict-success">✅ VERIFIED: SECURE<br>Cryptographic Proof Confirmed by Cloud Sentinel.</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="verdict-fail">🚨 ALERT: {status}<br>Intent Invalidation Triggered.</div>', unsafe_allow_html=True)
+                    st.warning("Analysis: The data does not match the sealed ledger record.")
