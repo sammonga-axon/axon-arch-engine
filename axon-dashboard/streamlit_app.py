@@ -18,7 +18,7 @@ guard = AxonGuard(API_URL, API_KEY)
 sentinel = SovereignSentinel()
 local_merkle = MerkleEngine()
 
-# --- CSS: VISUAL SURGERY (FIXED INPUTS) ---
+# --- CSS: VISUAL SURGERY (FIXED INPUTS & TABLES) ---
 st.markdown("""
     <style>
     /* 1. LAYOUT SPACING */
@@ -118,6 +118,11 @@ st.markdown("""
     div[data-testid="stSidebarUserContent"] {
         padding-top: 0rem !important;
     }
+
+    /* 7. TABLE SURGERY */
+    [data-testid="stTable"] { background-color: #ffffff !important; border-radius: 8px !important; overflow: hidden !important; border: 1px solid #cbd5e1 !important; }
+    th { background-color: #f8fafc !important; color: #0f172a !important; font-weight: 700 !important; border-bottom: 2px solid #cbd5e1 !important; }
+    td { background-color: #ffffff !important; color: #334155 !important; border-bottom: 1px solid #e2e8f0 !important; font-family: 'JetBrains Mono', monospace; font-size: 13px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -144,7 +149,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.header("SENTINEL STATUS")
-    st.success("AI FIREWALL: ONLINE")
+    st.success("AI Firewall: ONLINE")
     
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
@@ -197,7 +202,7 @@ with tab1:
     if not st.session_state.packet_log:
         st.info("Awaiting live network traffic... Inject a vector to populate telemetry.")
     else:
-        st.dataframe(pd.DataFrame(st.session_state.packet_log).tail(6), use_container_width=True)
+        st.table(pd.DataFrame(st.session_state.packet_log).tail(6))
 
 # --- TAB 2: SECURE AI CONTEXT ---
 with tab2:
