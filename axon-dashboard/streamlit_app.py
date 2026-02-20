@@ -195,8 +195,8 @@ with tab1:
     col1, col2, col3 = st.columns(3)
     
     # Calculate dynamic metrics
-    clean_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'CLEAN'])
-    quarantine_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'QUARANTINED'])
+    clean_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'CLEAN' or x['Defense_Action'] == 'VERIFIED_CLEAN'])
+    quarantine_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'QUARANTINED' or x['Defense_Action'] == 'TAMPERING_DETECTED'])
     
     col1.metric("Vectors Secured", f"{14200000 + clean_count:,}")
     col2.metric("Threats Neutralized", f"{42 + quarantine_count}")
@@ -297,7 +297,21 @@ with tab3:
                 is_safe, status = guard.protect(clean_data, clean_root)
                 
                 if is_safe:
+                    # Injecting Success Telemetry to the SIEM Log
+                    st.session_state.packet_log.append({
+                        'Timestamp': time.strftime('%H:%M:%S'), 
+                        'Origin': 'Forensic_Audit_Node', 
+                        'Payload_Hash': clean_root[:12] + '...', 
+                        'Defense_Action': 'VERIFIED_CLEAN'
+                    })
                     st.balloons()
                     st.markdown(f'<div class="verdict-success">✅ INTEGRITY CONFIRMED<br>The data is authentic and has not been tampered with.</div>', unsafe_allow_html=True)
                 else:
+                    # Injecting Failure Telemetry to the SIEM Log
+                    st.session_state.packet_log.append({
+                        'Timestamp': time.strftime('%H:%M:%S'), 
+                        'Origin': 'Forensic_Audit_Node', 
+                        'Payload_Hash': 'SIGNATURE_MISMATCH', 
+                        'Defense_Action': 'TAMPERING_DETECTED'
+                    })
                     st.markdown(f'<div class="verdict-fail">🚨 TAMPERING DETECTED<br>Digital Signature Mismatch.</div>', unsafe_allow_html=True)
