@@ -153,7 +153,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.header("SENTINEL STATUS")
-    st.success("AI Firewall: ONLINE")
+    st.success("AI FIREWALL: ONLINE")
     
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
@@ -199,7 +199,7 @@ with tab1:
     quarantine_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'QUARANTINED' or x['Defense_Action'] == 'TAMPERING_DETECTED'])
     
     col1.metric("Vectors Secured", f"{14200000 + clean_count:,}")
-    col2.metric("Threats Neutralized", f"{42 + quarantine_count}")
+    col2.metric("No Threats Detected", f"{42 + quarantine_count}")
     col3.metric("Model Integrity", "100%", delta="HMAC-SHA256 Verified")
     
     st.markdown("### 📡 Real-Time Packet Analysis")
