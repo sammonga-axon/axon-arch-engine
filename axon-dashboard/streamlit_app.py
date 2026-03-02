@@ -160,7 +160,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.header("SENTINEL STATUS")
-    st.success("AI Firewall: ONLINE")
+    st.success("AI FIREWALL: ONLINE")
     
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
