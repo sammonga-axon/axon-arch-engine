@@ -153,7 +153,7 @@ with st.sidebar:
         </div>
         <div style="background: #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 20px;">
             <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Integrity Core</div>
-            <div style="font-size: 14px; color: #0f172a; font-weight: 600;">Merkle-Tree (SHA-256)</div>
+            <div style="font-size: 14px; color: #0f172a; font-weight: 600;">Merkle-Tree (HMAC-SHA256)</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -207,7 +207,7 @@ with tab1:
     
     col1.metric("Vectors Secured", f"{14200000 + clean_count:,}")
     col2.metric("No Threats Detected", f"{42 + quarantine_count}")
-    col3.metric("Model Integrity", "100%", delta="SHA-256 Verified")
+    col3.metric("Model Integrity", "100%", delta="HMAC-SHA256 Verified")
     
     st.markdown("### 📡 Real-Time Packet Analysis")
     if not st.session_state.packet_log:
