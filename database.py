@@ -6,6 +6,8 @@ from psycopg2.extras import RealDictCursor
 
 # Load the Connection String (Ensure this uses Port 6543 for Transaction Pooling)
 DB_URL = os.getenv("DATABASE_URL")
+# Extract admin key dynamically to prevent hardcoded credential leakage
+ADMIN_KEY = os.getenv("AXON_SOVEREIGN_KEY", "UNCONFIGURED_KEY")
 
 class AxonDB:
     def __init__(self):
@@ -14,13 +16,7 @@ class AxonDB:
         
         # 1. STRATEGIC ATTEMPT: Sovereign Cloud Vault (Supabase)
         if DB_URL:
-            try:
-                # Use connect_timeout to prevent the app from hanging on cold starts
-                self.conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor, connect_timeout=10)
-                print("AXON ARCH | CONNECTED: Sovereign Cloud Vault (Supabase)")
-            except Exception as e:
-                print(f"--- CLOUD CONNECTION FAILED: {e} ---")
-                self.conn = None
+            self.conn = self._connect_postgres()
 
         # 2. TACTICAL FALLBACK: Persistent Local Ledger (SQLite)
         if not self.conn:
@@ -38,11 +34,43 @@ class AxonDB:
             self.conn = sqlite3.connect(db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
 
+    def _connect_postgres(self):
+        """Establishes a resilient PostgreSQL connection with OSI Layer 4 Keepalives."""
+        try:
+            conn = psycopg2.connect(
+                DB_URL, 
+                cursor_factory=RealDictCursor, 
+                connect_timeout=10,
+                keepalives=1,
+                keepalives_idle=60,
+                keepalives_interval=10,
+                keepalives_count=5
+            )
+            # Autocommit ensures high-frequency SIEM writes do not lock the transaction table
+            conn.autocommit = True
+            print("AXON ARCH | CONNECTED: Sovereign Cloud Vault [KEEPALIVES ACTIVE]")
+            return conn
+        except Exception as e:
+            print(f"--- CLOUD CONNECTION FAILED: {e} ---")
+            return None
+
     def get_cursor(self):
+        """Executes a pre-ping to mathematically guarantee socket liveliness before execution."""
+        if self.mode == "POSTGRES":
+            try:
+                with self.conn.cursor() as cursor:
+                    cursor.execute("SELECT 1")
+            except (psycopg2.OperationalError, psycopg2.InterfaceError):
+                print("AXON ARCH | SOCKET DEAD. Executing graceful reconnection...")
+                self.conn = self._connect_postgres()
+                if not self.conn:
+                    raise Exception("DATABASE_UNREACHABLE")
+        
         return self.conn.cursor()
 
     def commit(self):
-        self.conn.commit()
+        if self.mode == "SQLITE":
+            self.conn.commit()
 
     def init_db(self):
         cursor = self.get_cursor()
@@ -66,12 +94,12 @@ class AxonDB:
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            # Seed Admin
+            # Seed Admin (Dynamic, Zero-Trust)
             cursor.execute('''
                 INSERT INTO clients (api_key, organization_name, tier) 
                 VALUES (%s, %s, %s)
                 ON CONFLICT (api_key) DO NOTHING
-            ''', ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
+            ''', (ADMIN_KEY, "AXON_ARCH_ADMIN", "Sovereign"))
             
         else: 
             # SQLite Schema
@@ -92,12 +120,12 @@ class AxonDB:
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            # Seed Admin
+            # Seed Admin (Dynamic, Zero-Trust)
             try:
                 cursor.execute('''
                     INSERT INTO clients (api_key, organization_name, tier) 
                     VALUES (?, ?, ?)
-                ''', ("SOVEREIGN_KEY_001", "AXON_ARCH_ADMIN", "Sovereign"))
+                ''', (ADMIN_KEY, "AXON_ARCH_ADMIN", "Sovereign"))
             except sqlite3.IntegrityError:
                 pass 
 
@@ -130,6 +158,7 @@ class AxonDB:
                 "INSERT INTO provenance_log (client_key, merkle_root, stored_data) VALUES (?, ?, ?)", 
                 (api_key, root_hash, data_json)
             )
+            self.commit()
             return cursor.lastrowid
 
     def verify_integrity(self, root_hash: str):

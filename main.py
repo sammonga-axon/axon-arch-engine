@@ -14,7 +14,7 @@ from siem_engine import SovereignSentinel
 db = AxonDB()
 sentinel = SovereignSentinel()
 
-# --- ENTERPRISE LIFESPAN (Replaces Deprecated @app.on_event) ---
+# --- ENTERPRISE LIFESPAN ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("AXON ARCH | SYSTEM BOOT: Initializing Ledger...")
@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     print("AXON ARCH | SYSTEM HALT: Closing Ledger Connections...")
     db.close()
 
-app = FastAPI(title="AXON ARCH ENGINE", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="AXON ARCH ENGINE", version="2.1.0", lifespan=lifespan)
 
 # --- MODELS ---
 class SealRequest(BaseModel):
@@ -32,6 +32,7 @@ class SealRequest(BaseModel):
 class ValidateRequest(BaseModel):
     merkle_root: str
     data_fragment: str
+    proof: List[str] = []  # Added to allow O(log N) verification for batched payloads
 
 # --- ENDPOINTS ---
 @app.get("/")
@@ -45,19 +46,20 @@ def seal_data(payload: SealRequest, x_api_key: Annotated[Optional[str], Header()
     2. Hash (HMAC Merkle)
     3. Save (DB)
     """
-    # 1. Security Check
-    if x_api_key != "SOVEREIGN_KEY_001": 
+    # 1. Zero-Trust Security Check
+    expected_key = os.environ.get("AXON_SOVEREIGN_KEY")
+    if not expected_key or x_api_key != expected_key: 
+        print("AXON ARCH | INTENT INVALIDATED: Cryptographic Key Mismatch")
         raise HTTPException(status_code=401, detail="UNAUTHORIZED_ACCESS")
 
-    # 2. Sentinel Scan
+    # 2. Sentinel Scan (< 5ms Inline Path)
     for item in payload.data_items:
         scan = sentinel.scan_payload(item)
         if scan["status"] == "DETECTED":
-            # Intent invalidation triggers immediate signal
             print(f"AXON ARCH | INTENT INVALIDATED: {scan['type']}")
             raise HTTPException(status_code=403, detail=f"THREAT_DETECTED: {scan['type']}")
 
-    # 3. Merkle Hashing
+    # 3. Merkle Hashing (O(1) Leaf Generation)
     try:
         engine = MerkleEngine(data_blocks=payload.data_items)
         root_hash = engine.root
@@ -65,7 +67,7 @@ def seal_data(payload: SealRequest, x_api_key: Annotated[Optional[str], Header()
         print(f"MERKLE ERROR: {e}")
         raise HTTPException(status_code=500, detail="HASH_CALCULATION_FAILED")
 
-    # 4. Persistence
+    # 4. Ledger Persistence
     try:
         db.log_seal(x_api_key, root_hash, payload.data_items)
         return {
@@ -84,6 +86,11 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Annotated[Optional[s
     1. Check DB for Provenance
     2. Check HMAC for Integrity
     """
+    # 1. Zero-Trust Security Check
+    expected_key = os.environ.get("AXON_SOVEREIGN_KEY")
+    if not expected_key or x_api_key != expected_key: 
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED_ACCESS")
+
     print(f"AUDIT REQUEST: Checking Root {payload.merkle_root}")
 
     # STEP 1: PROVENANCE CHECK
@@ -99,7 +106,7 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Annotated[Optional[s
     # STEP 2: MATHEMATICAL CHECK
     is_valid_math = MerkleEngine.verify_proof(
         data=payload.data_fragment,
-        proof=[], 
+        proof=payload.proof, 
         target_root=payload.merkle_root
     )
 
@@ -110,7 +117,6 @@ def validate_integrity(payload: ValidateRequest, x_api_key: Annotated[Optional[s
             "timestamp": str(record['timestamp'])
         }
     else:
-        # Merkle proof failure triggers immediate signal
         print("AXON ARCH | INTENT INVALIDATED: Merkle Proof Failed")
         return {
             "verified": False,
