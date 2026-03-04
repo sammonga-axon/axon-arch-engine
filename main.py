@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     print("AXON ARCH | SYSTEM HALT: Closing Ledger Connections...")
     db.close()
 
-app = FastAPI(title="AXON ARCH ENGINE", version="2.0", lifespan=lifespan)
+app = FastAPI(title="AXON ARCH ENGINE", version="2.1.0", lifespan=lifespan)
 
 # --- MODELS ---
 class SealRequest(BaseModel):
@@ -47,7 +47,7 @@ def seal_data(payload: SealRequest, x_api_key: Annotated[Optional[str], Header()
     3. Save (DB)
     """
     # 1. Zero-Trust Security Check
-    expected_key = os.environ.get("SOVEREIGN_KEY_001")
+    expected_key = os.environ.get("AXON_SOVEREIGN_KEY")
     if not expected_key or x_api_key != expected_key: 
         print("AXON ARCH | INTENT INVALIDATED: Cryptographic Key Mismatch")
         raise HTTPException(status_code=401, detail="UNAUTHORIZED_ACCESS")
