@@ -15,7 +15,12 @@ from siem_engine import SovereignSentinel
 st.set_page_config(page_title="AXON ARCH | AI Memory Defense", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
 API_URL = "https://axon-arch-engine.onrender.com" 
-API_KEY = "SOVEREIGN_KEY_001"
+
+# ZERO-TRUST CREDENTIAL LOADER
+try:
+    API_KEY = st.secrets["AXON_SOVEREIGN_KEY"]
+except (KeyError, FileNotFoundError):
+    API_KEY = os.environ.get("AXON_SOVEREIGN_KEY", "UNCONFIGURED_KEY")
 
 # Initialize Engines
 guard = AxonGuard(API_URL, API_KEY)
@@ -25,115 +30,25 @@ local_merkle = MerkleEngine()
 # --- CSS: VISUAL SURGERY (FIXED INPUTS & TABLES) ---
 st.markdown("""
     <style>
-    /* 1. LAYOUT SPACING */
-    .block-container { 
-        padding-top: 3rem !important; 
-        padding-bottom: 1rem !important;
-    }
-    
-    /* 2. FORCE LIGHT THEME (Global) */
+    .block-container { padding-top: 3rem !important; padding-bottom: 1rem !important; }
     .stApp { background-color: #ffffff !important; }
     section[data-testid="stSidebar"] { background-color: #f8fafc !important; } 
     h1, h2, h3, h4, h5, h6, p, li, span, div, label { color: #0f172a !important; font-family: 'Inter', sans-serif; }
-    
-    /* 3. INPUT FIELDS */
-    div[data-baseweb="base-input"], .stTextArea textarea, .stTextInput input {
-        background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        color: #0f172a !important;
-        border-radius: 4px !important;
-    }
-    input, textarea {
-        color: #000000 !important;
-        caret-color: #000000 !important;
-    }
-
-    /* 4. BUTTON SURGERY */
-    button[kind="primary"], div[data-testid="stFormSubmitButton"] > button {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border: 2px solid #cbd5e1 !important; 
-        border-radius: 6px;
-        font-weight: 700 !important;
-        height: 48px !important;
-        width: 100% !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    div[data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #f1f5f9 !important;
-        border-color: #0f172a !important;
-        color: #0f172a !important;
-    }
+    div[data-baseweb="base-input"], .stTextArea textarea, .stTextInput input { background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; color: #0f172a !important; border-radius: 4px !important; }
+    input, textarea { color: #000000 !important; caret-color: #000000 !important; }
+    button[kind="primary"], div[data-testid="stFormSubmitButton"] > button { background-color: #ffffff !important; color: #0f172a !important; border: 2px solid #cbd5e1 !important; border-radius: 6px; font-weight: 700 !important; height: 48px !important; width: 100% !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    div[data-testid="stFormSubmitButton"] > button:hover { background-color: #f1f5f9 !important; border-color: #0f172a !important; color: #0f172a !important; }
     div[data-testid="stFormSubmitButton"] p { color: #0f172a !important; }
-
-    /* 5. METRIC RESIZING */
-    .latency-badge {
-        font-family: 'JetBrains Mono', monospace;
-        background-color: #ffffff;
-        border: 1px solid #cbd5e1;
-        color: #0f172a;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 18px; 
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .latency-dot {
-        height: 10px;
-        width: 10px;
-        background-color: #16a34a; 
-        border-radius: 50%;
-        display: inline-block;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
-        70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-    }
-
-    /* 6. STATUS MESSAGES */
-    .verdict-success { 
-        color: #166534 !important; 
-        background-color: #dcfce7; 
-        padding: 20px; 
-        border-radius: 8px; 
-        border: 1px solid #bbf7d0; 
-        margin-top: 15px; 
-        font-weight: 700; 
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .verdict-fail { 
-        color: #991b1b !important; 
-        background-color: #fee2e2; 
-        padding: 15px; 
-        border-radius: 6px; 
-        border: 1px solid #fecaca; 
-        margin-top: 10px; 
-        font-weight: 600; 
-    }
-    
-    div[data-testid="stSidebarUserContent"] {
-        padding-top: 0rem !important;
-    }
-
-    /* 7. TABLE SURGERY */
+    .latency-badge { font-family: 'JetBrains Mono', monospace; background-color: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; padding: 10px 15px; border-radius: 8px; font-weight: 600; font-size: 18px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .latency-dot { height: 10px; width: 10px; background-color: #16a34a; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); } 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); } }
+    .verdict-success { color: #166534 !important; background-color: #dcfce7; padding: 20px; border-radius: 8px; border: 1px solid #bbf7d0; margin-top: 15px; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 12px; }
+    .verdict-fail { color: #991b1b !important; background-color: #fee2e2; padding: 15px; border-radius: 6px; border: 1px solid #fecaca; margin-top: 10px; font-weight: 600; }
+    div[data-testid="stSidebarUserContent"] { padding-top: 0rem !important; }
     [data-testid="stTable"] { background-color: #ffffff !important; border-radius: 8px !important; overflow: hidden !important; border: 1px solid #cbd5e1 !important; }
     th { background-color: #f8fafc !important; color: #0f172a !important; font-weight: 700 !important; border-bottom: 2px solid #cbd5e1 !important; }
     td { background-color: #ffffff !important; color: #334155 !important; border-bottom: 1px solid #e2e8f0 !important; font-family: 'JetBrains Mono', monospace; font-size: 13px !important; }
-    
-    /* 8. ARTIFACT ABSTRACTION (STREAMLIT CAMOUFLAGE) */
-    #MainMenu {visibility: hidden !important;}
-    header {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-    .stDeployButton {display: none !important;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
+    #MainMenu, header, footer, .stDeployButton, [data-testid="stToolbar"] { visibility: hidden !important; display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -156,11 +71,12 @@ with st.sidebar:
             <div style="font-size: 14px; color: #0f172a; font-weight: 600;">Merkle-Tree (HMAC-SHA256)</div>
         </div>
     """, unsafe_allow_html=True)
-
     st.markdown("---")
-    
     st.header("SENTINEL STATUS")
-    st.success("AI FIREWALL: ONLINE")
+    if API_KEY == "UNCONFIGURED_KEY":
+        st.error("AI FIREWALL: NO CRYPTOGRAPHIC KEY")
+    else:
+        st.success("AI FIREWALL: ONLINE")
     
     st.markdown("""
         <div style="margin-top: 10px; display: flex; align-items: baseline; gap: 10px;">
@@ -168,9 +84,7 @@ with st.sidebar:
             <span style="background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; border: 1px solid #bbf7d0;">VERIFIED</span>
         </div>
     """, unsafe_allow_html=True)
-    
     st.markdown("---")
-
     st.markdown("### 🛡️ SIEM Active Protocols")
     st.markdown("""
         <div style="font-size: 13px; margin-bottom: 6px;">✅ SQL Injection <span style="color:#64748b">(Pattern)</span></div>
@@ -200,8 +114,6 @@ tab1, tab2, tab3 = st.tabs(["📊 Threat Landscape", "🧠 Secure AI Context", "
 # --- TAB 1: OVERVIEW ---
 with tab1:
     col1, col2, col3 = st.columns(3)
-    
-    # Calculate dynamic metrics
     clean_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'CLEAN' or x['Defense_Action'] == 'VERIFIED_CLEAN'])
     quarantine_count = len([x for x in st.session_state.packet_log if x['Defense_Action'] == 'QUARANTINED' or x['Defense_Action'] == 'TAMPERING_DETECTED'])
     
@@ -220,14 +132,13 @@ with tab2:
     st.subheader("Inject Data into AI Memory Stream")
     
     with st.form("seal_form"):
-        data_to_seal = st.text_area("Input Vector / Context Chunk:", 
-                                    placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", 
-                                    height=150)
-        
+        data_to_seal = st.text_area("Input Vector / Context Chunk:", placeholder="EXAMPLE DATA: [0.002, 0.991, -0.221]", height=150)
         submitted = st.form_submit_button("🛡️ SCAN & SEAL TO MEMORY")
         
         if submitted:
-            if data_to_seal:
+            if API_KEY == "UNCONFIGURED_KEY":
+                st.error("🚨 CONFIGURATION ERROR: AXON_SOVEREIGN_KEY not found in Streamlit Secrets.")
+            elif data_to_seal:
                 clean_input = data_to_seal.strip()
                 items = [clean_input]
                 
@@ -235,7 +146,6 @@ with tab2:
                     threat = sentinel.scan_payload(clean_input)
                     
                     if threat["status"] == "DETECTED":
-                         # Append to SIEM Log dynamically
                          st.session_state.packet_log.append({'Timestamp': time.strftime('%H:%M:%S'), 'Origin': 'External_UI', 'Payload_Hash': 'MALICIOUS_PAYLOAD', 'Defense_Action': 'QUARANTINED'})
                          st.markdown(f'<div class="verdict-fail">🚨 MALWARE DETECTED<br>Type: {threat["type"]}<br>Status: QUARANTINED</div>', unsafe_allow_html=True)
                     else:
@@ -243,7 +153,6 @@ with tab2:
                         payload_hash = hashlib.sha256(clean_input.encode()).hexdigest()
                         core_end = time.perf_counter()
                         
-                        # Append to SIEM Log dynamically
                         st.session_state.packet_log.append({'Timestamp': time.strftime('%H:%M:%S'), 'Origin': 'External_UI', 'Payload_Hash': payload_hash[:16] + '...', 'Defense_Action': 'CLEAN'})
                         
                         new_latency = f"{(core_end - core_start) * 1000:.4f} ms"
@@ -255,10 +164,10 @@ with tab2:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Dynamic explicit success message
                         st.markdown('<div style="color: #166534; font-weight: 700; margin-top: 10px; margin-bottom: 10px; padding: 10px; border: 1px solid #bbf7d0; border-radius: 5px; background-color: #dcfce7;">🛡️ SIEM Adversarial Check: Threat Not Detected</div>', unsafe_allow_html=True)
                         
                         try:
+                            # Direct request execution using dynamically loaded API_KEY
                             res = requests.post(f"{API_URL}/v1/seal", json={"data_items": items}, headers={"x-api-key": API_KEY}, timeout=60)
                             
                             if res.status_code == 200:
@@ -273,14 +182,15 @@ with tab2:
                                     </div>
                                 """, unsafe_allow_html=True)
                                 st.markdown("### 🔑 Cryptographic Proof:")
-                                # Massively increased font size for the Seal ID
                                 st.markdown(f"""
                                     <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; border: 2px solid #94a3b8; font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: #0f172a; word-break: break-all; text-align: center; letter-spacing: 1px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
                                         {seal_id}
                                     </div>
                                 """, unsafe_allow_html=True)
+                            elif res.status_code == 401:
+                                st.error("🚨 401 UNAUTHORIZED: Streamlit Secret does not match Render Environment Variable.")
                             elif res.status_code == 403:
-                                st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED (API Key Invalid)")
+                                st.error("🚨 CLOUD FIREWALL: INJECTION BLOCKED (SIEM Rejection)")
                             else:
                                 st.error(f"Cloud Engine Error: {res.status_code} - {res.text}")
                         except Exception as e:
@@ -289,11 +199,9 @@ with tab2:
 # --- TAB 3: AUDIT ---
 with tab3:
     st.subheader("Forensic Audit")
-
     with st.form("audit_form"):
         target_root = st.text_input("Enter Seal ID (Hash):")
         target_data = st.text_input("Enter Suspect Data:")
-        
         audit_submitted = st.form_submit_button("RUN INTEGRITY CHECK")
         
         if audit_submitted:
@@ -304,7 +212,6 @@ with tab3:
                 is_safe, status = guard.protect(clean_data, clean_root)
                 
                 if is_safe:
-                    # Injecting Success Telemetry to the SIEM Log
                     st.session_state.packet_log.append({
                         'Timestamp': time.strftime('%H:%M:%S'), 
                         'Origin': 'Forensic_Audit_Node', 
@@ -314,7 +221,6 @@ with tab3:
                     st.balloons()
                     st.markdown(f'<div class="verdict-success">✅ INTEGRITY CONFIRMED<br>The data is authentic and has not been tampered with.</div>', unsafe_allow_html=True)
                 else:
-                    # Injecting Failure Telemetry to the SIEM Log
                     st.session_state.packet_log.append({
                         'Timestamp': time.strftime('%H:%M:%S'), 
                         'Origin': 'Forensic_Audit_Node', 
